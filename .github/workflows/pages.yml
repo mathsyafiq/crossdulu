@@ -15,11 +15,16 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+        with:
+          enablement: true
       - uses: actions/setup-node@v4
         with:
           node-version: 22
           cache: npm
       - run: npm ci
+      # The unit tests draw text with node-canvas, which needs at least one system font (the runner image has none that match).
+      - run: sudo apt-get update && sudo apt-get install -y fonts-dejavu-core fonts-liberation
       - run: npm test
       - name: Build
         run: |
