@@ -109,3 +109,4 @@ input[type="range"] { width: 100%; min-height: var(--touch-target-min); accent-c
 .cam-view video { display: block; width: 100%; height: 100%; object-fit: contain; }
 .cam-guide { position: absolute; border: 3px solid var(--watermark-halo); border-radius: var(--radius-md); box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .55); pointer-events: none; }
 .pdf-pick { display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; margin-bottom: var(--space-3); }
+.chip[aria-checked="true"] { background: var(--color-accent-soft); color: var(--color-accent); border-color: var(--color-accent); font-weight: 600; }

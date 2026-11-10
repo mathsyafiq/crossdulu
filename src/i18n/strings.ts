@@ -56,6 +56,10 @@ export interface EditorStrings {
   previewFront: string;
   previewBack: string;
   staysHere: string;
+  position: string;
+  positionCorner: string;
+  positionMiddle: string;
+  cornerNote: string;
   cameraTitle: string;
   cameraPreview: string;
   cameraStarting: string;
@@ -179,6 +183,10 @@ export const dict: Record<Lang, Dict> = {
         previewFront: "Pratonton depan",
         previewBack: "Pratonton belakang",
         staysHere: "Gambar kekal dalam browser ini.",
+        position: "Kedudukan palang",
+        positionCorner: "Sudut kiri atas",
+        positionMiddle: "Tengah kad",
+        cornerNote: "Palang di sudut kiri atas dijauhkan daripada bahagian tengah kad, tempat muka, nama dan nombor IC biasanya berada. Semak pratonton dan laraskan Saiz palang supaya tidak menutup butiran kad. Palang di sudut lebih mudah dipotong keluar: pilih Tengah kad jika anda mahu perlindungan yang lebih kuat.",
         cameraTitle: "Ambil gambar kad",
         cameraPreview: "Paparan kamera",
         cameraStarting: "Menghidupkan kamera...",
@@ -301,6 +309,10 @@ export const dict: Record<Lang, Dict> = {
         previewFront: "Front preview",
         previewBack: "Back preview",
         staysHere: "Images stay in this browser.",
+        position: "Band position",
+        positionCorner: "Top-left corner",
+        positionMiddle: "Across the middle",
+        cornerNote: "The top-left band is kept away from the middle of the card, where the face, name and ID number usually are. Check the preview and adjust Band size so it does not cover card details. A corner band is easier to crop out: choose Across the middle if you want stronger protection.",
         cameraTitle: "Take a picture of the card",
         cameraPreview: "Camera view",
         cameraStarting: "Starting the camera...",

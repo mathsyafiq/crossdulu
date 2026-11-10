@@ -5,10 +5,11 @@ import { importPdf, isPdf, preloadPdfReader } from "../lib/pdfimport";
 import {
   type Surface, type Settings, type Warning,
   loadImage, LoadFailure, renderCard, checkSettings, exportPng, exportPdf, download, preloadPdf,
-  WATERMARK_COLORS, DEFAULT_ANGLE, DEFAULT_OPACITY, DEFAULT_SCALE, MIN_SCALE,
+  WATERMARK_COLORS, DEFAULT_ANGLE, DEFAULT_OPACITY, DEFAULT_SCALE, MIN_SCALE, DEFAULT_POSITION, type Position,
 } from "../lib/watermark";
 
 const CONSENT_KEY = "palang-consent-v1";
+const CORNER_SCALE = 0.6; // starting size for the corner band: clear of most card details, still readable
 
 interface Props {
   lang: Lang;
@@ -142,7 +143,8 @@ export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
   const [addDate, setAddDate] = useState(true);
   const [opacity, setOpacity] = useState(DEFAULT_OPACITY);
   const [angle, setAngle] = useState(DEFAULT_ANGLE);
-  const [scale, setScale] = useState(DEFAULT_SCALE);
+  const [position, setPosition] = useState<Position>(DEFAULT_POSITION);
+  const [scale, setScale] = useState(CORNER_SCALE);
   const [colour, setColour] = useState<string>(WATERMARK_COLORS[0]);
   const [busy, setBusy] = useState<null | "png" | "pdf">(null);
   const [cameraFor, setCameraFor] = useState<null | "front" | "back">(null);
@@ -216,7 +218,7 @@ export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
 
   const trimmed = text.trim();
   const full = trimmed ? (addDate ? `${trimmed} ${today()}` : trimmed) : "";
-  const settings: Settings = { text: full, opacity, angle, color: colour, scale };
+  const settings: Settings = { text: full, opacity, angle, color: colour, scale, position };
   const warnings: Warning[] = checkSettings(settings);
   const both = !!front && !!back;
   const canExport = both && !warnings.includes("empty") && busy === null;
@@ -300,6 +302,19 @@ export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
                 <input type="checkbox" checked={addDate} onChange={(e) => setAddDate((e.target as HTMLInputElement).checked)} />
                 {t.addDate}
               </label>
+
+              <div class="field" role="radiogroup" aria-label={t.position}>
+                <span class="label">{t.position}</span>
+                <div class="row">
+                  {(["corner", "middle"] as Position[]).map((pos) => (
+                    <button type="button" class="chip" role="radio" aria-checked={position === pos}
+                      onClick={() => { setPosition(pos); setScale(pos === "corner" ? CORNER_SCALE : DEFAULT_SCALE); }}>
+                      {pos === "corner" ? t.positionCorner : t.positionMiddle}
+                    </button>
+                  ))}
+                </div>
+              </div>
+              {position === "corner" && <p class="notice info">{t.cornerNote}</p>}
 
               <div class="field">
                 <label for="wm-op">{t.opacity}: {Math.round(opacity * 100)}%</label>

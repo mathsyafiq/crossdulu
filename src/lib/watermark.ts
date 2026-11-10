@@ -13,8 +13,11 @@ export interface Settings {
   opacity: number; // 0.1 - 1
   angle: number; // degrees, default -45
   color: string;
-  scale?: number; // 0.4 - 1, size of the band and text, default 1
+  scale?: number; // 0.4 - 1, size of the band and text (in the corner: how far it reaches), default 1
+  position?: Position; // "corner" (default): across the top-left corner only. "middle": across the whole card.
 }
+export type Position = "corner" | "middle";
+export const DEFAULT_POSITION: Position = "corner";
 
 export const CARD_MM_W = 85.6; // ID-1 card width
 export const CARD_PX_W = 1011; // 300 dpi
@@ -78,7 +81,7 @@ export function checkSettings(s: Settings): Warning[] {
   if (!s.text.trim()) w.push("empty");
   if (s.opacity < 0.35) w.push("faint");
   if (s.opacity > 0.85) w.push("heavy");
-  if ((s.scale ?? DEFAULT_SCALE) < SMALL_SCALE_WARN) w.push("small");
+  if ((s.position ?? DEFAULT_POSITION) === "middle" && (s.scale ?? DEFAULT_SCALE) < SMALL_SCALE_WARN) w.push("small");
   return w;
 }
 
@@ -130,9 +133,119 @@ export function layoutBand(ctx: any, w: number, h: number, s: Settings): BandLay
   return { size, band, line, chord, repeated };
 }
 
+
+export interface CornerLayout {
+  size: number; // font px
+  lines: string[]; // one or two lines of text, first line nearest the corner
+  band: number; // distance between the two lines, px
+  mx: number; // middle of the band's centre line, px from the card's top-left
+  my: number;
+  angle: number; // radians
+  /** How far the band's outer edge reaches along the top and the left edge (px), for checks. */
+  reachTop: number;
+  reachLeft: number;
+}
+
+/**
+ * Lays the band across the top-left corner only, so it stays clear of the middle of the card
+ * where the photo, name and ID number usually are. The text is made as large as fits, and is
+ * split over two lines when that makes it clearly bigger.
+ */
+export function layoutCorner(ctx: any, w: number, h: number, s: Settings): CornerLayout {
+  const text = s.text.trim().replace(/\s+/g, " ");
+  const scale = Math.min(1, Math.max(MIN_SCALE, s.scale ?? DEFAULT_SCALE));
+  const phi = (Math.min(75, Math.max(15, Math.abs(s.angle))) * Math.PI) / 180;
+  const sin = Math.sin(phi), cos = Math.cos(phi), sc = sin * cos;
+  const r = 0.28 + 0.27 * scale; // reach as a share of the card's width and height
+  const farMax = Math.min(w * r * sin, h * r * cos); // outer edge's distance from the corner
+  const cap = Math.max(10, Math.round(h * 0.11 * scale)); // never bigger than the middle-of-card text
+
+  const options: string[][] = [[text]];
+  const words = text.split(" ");
+  if (words.length > 1) {
+    let best = 1, bestGap = Infinity;
+    for (let i = 1; i < words.length; i++) {
+      const gap = Math.abs(words.slice(0, i).join(" ").length - words.slice(i).join(" ").length);
+      if (gap < bestGap) { bestGap = gap; best = i; }
+    }
+    options.push([words.slice(0, best).join(" "), words.slice(best).join(" ")]);
+  }
+
+  const fit = (lines: string[]) => {
+    const n = lines.length;
+    ctx.font = `800 100px ${FONT}`;
+    const k = Math.max(...lines.map((l) => ctx.measureText(l).width)) / 100; // line width per px of font size
+    const thick = (px: number) => px * (1.2 * n + 1.1);
+    // The line nearest the corner has the shortest stretch of band, so the block's near edge sets the limit.
+    let size = farMax / ((k * sc) / 0.9 + 1.2 * n + 0.55);
+    size = Math.max(9, Math.min(cap, size));
+    // Re-measure and tighten: text width is not exactly linear in font size.
+    for (let i = 0; i < 8; i++) {
+      ctx.font = `800 ${size}px ${FONT}`;
+      const width = Math.max(...lines.map((l) => ctx.measureText(l).width));
+      const need = Math.max((width * sc) / 0.9 + 0.6 * n * size, thick(size) / 2 + 0.3 * size);
+      if (need + thick(size) / 2 <= farMax + 0.5 || size <= 9) { return { lines, size, width, need, thick: thick(size) }; }
+      size = Math.max(9, size - Math.max(0.5, (need + thick(size) / 2 - farMax) / (k + 1)));
+    }
+    ctx.font = `800 ${size}px ${FONT}`;
+    const width = Math.max(...lines.map((l) => ctx.measureText(l).width));
+    return { lines, size, width, need: Math.max((width * sc) / 0.9 + 0.6 * n * size, thick(size) / 2 + 0.3 * size), thick: thick(size) };
+  };
+  let pick = fit(options[0]);
+  if (options[1]) {
+    const two = fit(options[1]);
+    if (two.size > pick.size * 1.15) pick = two;
+  }
+  const D = Math.min(pick.need, farMax - pick.thick / 2); // centre line's distance from the corner
+  const reachTop = (D + pick.thick / 2) / sin;
+  const reachLeft = (D + pick.thick / 2) / cos;
+  return {
+    size: Math.round(pick.size * 10) / 10,
+    lines: pick.lines,
+    band: Math.round(pick.thick),
+    mx: D / sin / 2,
+    my: D / cos / 2,
+    angle: -phi,
+    reachTop,
+    reachLeft,
+  };
+}
+
+function drawCorner(ctx: any, w: number, h: number, s: Settings): void {
+  const L = layoutCorner(ctx, w, h, s);
+  const diag = Math.hypot(w, h);
+  ctx.save();
+  ctx.translate(L.mx, L.my);
+  ctx.rotate(L.angle);
+  ctx.globalAlpha = s.opacity;
+  ctx.strokeStyle = s.color;
+  ctx.lineWidth = Math.max(2, Math.round(h * 0.008 * Math.min(1, Math.max(MIN_SCALE, s.scale ?? DEFAULT_SCALE))));
+  for (const side of [-1, 1]) {
+    ctx.beginPath();
+    ctx.moveTo(-diag, (side * L.band) / 2);
+    ctx.lineTo(diag, (side * L.band) / 2);
+    ctx.stroke();
+  }
+  ctx.font = `800 ${L.size}px ${FONT}`;
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.lineJoin = "round";
+  const gap = L.size * 1.2;
+  L.lines.forEach((line, i) => {
+    const y = (i - (L.lines.length - 1) / 2) * gap;
+    ctx.strokeStyle = WATERMARK_HALO;
+    ctx.lineWidth = Math.max(3, L.size * 0.16);
+    ctx.strokeText(line, 0, y);
+    ctx.fillStyle = s.color;
+    ctx.fillText(line, 0, y);
+  });
+  ctx.restore();
+}
+
 /** Draws the band: two parallel lines with the text between them. */
 export function drawWatermark(ctx: any, w: number, h: number, s: Settings): void {
   if (!s.text.trim()) return;
+  if ((s.position ?? DEFAULT_POSITION) === "corner") return drawCorner(ctx, w, h, s);
   ctx.save();
   const L = layoutBand(ctx, w, h, s);
   const diag = Math.hypot(w, h);
