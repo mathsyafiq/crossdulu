@@ -110,9 +110,15 @@ export function layoutBand(ctx: any, w: number, h: number, s: Settings): BandLay
   const one = ctx.measureText(text).width;
   let size = one > fit ? Math.max(14, Math.floor((base * fit) / one)) : base;
   ctx.font = `800 ${size}px ${FONT}`;
+  let width = ctx.measureText(text).width;
+  // Text width is not exactly linear in font size (hinting, fallback fonts): re-measure and tighten until it fits.
+  for (let i = 0; i < 8 && width > fit && size > 10; i++) {
+    size = Math.max(10, Math.min(size - 1, Math.floor((size * fit) / width)));
+    ctx.font = `800 ${size}px ${FONT}`;
+    width = ctx.measureText(text).width;
+  }
   let line = text;
   let repeated = false;
-  const width = ctx.measureText(text).width;
   if (width < fit * 0.6) {
     const unit = `${text}   •   `;
     const unitW = ctx.measureText(unit).width;
