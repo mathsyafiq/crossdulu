@@ -1,0 +1,14 @@
+---
+import Base from "../layouts/Base.astro";
+import { SITE_NAME, path } from "../i18n/strings";
+---
+<Base lang="ms" page="home" title={`404: ${SITE_NAME}`} description="Halaman tidak dijumpai. Page not found." noindex>
+  <section class="prose" style="padding-top: var(--space-7)">
+    <h1>Halaman tidak dijumpai</h1>
+    <p>Alamat ini tiada atau sudah dialihkan.</p>
+    <p><a class="btn primary" href={path("ms", "home")}>Ke laman utama</a></p>
+    <h2 lang="en">Page not found</h2>
+    <p lang="en">That address does not exist or has moved.</p>
+    <p lang="en"><a class="btn secondary" href={path("en", "home")}>Go to the home page</a></p>
+  </section>
+</Base>

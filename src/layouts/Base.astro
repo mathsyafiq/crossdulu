@@ -1,0 +1,53 @@
+---
+import "../styles/tokens.css";
+import "../styles/global.css";
+import { dict, LANGS, SITE_NAME, path, type Lang, type PageKey } from "../i18n/strings";
+
+interface Props {
+  lang: Lang;
+  page: PageKey;
+  title: string;
+  description: string;
+  noindex?: boolean;
+}
+const { lang, page, title, description, noindex } = Astro.props;
+const d = dict[lang];
+const other: Lang = lang === "ms" ? "en" : "ms";
+---
+<!doctype html>
+<html lang={d.htmlLang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' blob: data:; font-src 'self'; connect-src 'none'; form-action 'none'; base-uri 'self'; object-src 'none'" />
+    <title>{title}</title>
+    <meta name="description" content={description} />
+    {noindex && <meta name="robots" content="noindex" />}
+    {LANGS.map((l) => <link rel="alternate" hreflang={dict[l].htmlLang} href={path(l, page)} />)}
+    <link rel="icon" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/favicon.svg`} type="image/svg+xml" />
+    <meta name="theme-color" content="#0f766e" />
+  </head>
+  <body>
+    <a class="skip" href="#main">{d.nav.skip}</a>
+    <header class="site-header">
+      <div class="wrap bar">
+        <a class="brand" href={path(lang, "home")}>{SITE_NAME}</a>
+        <nav aria-label="Main" class="nav">
+          <a href={path(lang, "editor")} aria-current={page === "editor" ? "page" : undefined}>{d.nav.editor}</a>
+          <a href={path(lang, "privacy")} aria-current={page === "privacy" ? "page" : undefined}>{d.nav.privacy}</a>
+          <a href={path(lang, "terms")} aria-current={page === "terms" ? "page" : undefined}>{d.nav.terms}</a>
+          <span class="langs">
+            <a href={path(lang, page)} lang={lang} aria-current="true">{lang.toUpperCase()}</a>
+            <a href={path(other, page)} lang={other}>{other.toUpperCase()}</a>
+          </span>
+        </nav>
+      </div>
+    </header>
+    <main id="main" class="wrap">
+      <slot />
+    </main>
+    <footer class="site-footer">
+      <div class="wrap">{d.footer}</div>
+    </footer>
+  </body>
+</html>

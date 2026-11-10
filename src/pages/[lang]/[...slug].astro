@@ -1,0 +1,104 @@
+---
+import Base from "../../layouts/Base.astro";
+import Editor from "../../components/Editor";
+import { dict, LANGS, SLUGS, path, type Lang, type PageKey } from "../../i18n/strings";
+
+export function getStaticPaths() {
+  const out: { params: { lang: Lang; slug: string | undefined }; props: { lang: Lang; page: PageKey } }[] = [];
+  for (const lang of LANGS) {
+    for (const page of Object.keys(SLUGS[lang]) as PageKey[]) {
+      const slug = SLUGS[lang][page] || undefined;
+      out.push({ params: { lang, slug }, props: { lang, page } });
+    }
+  }
+  return out;
+}
+
+const { lang, page } = Astro.props as { lang: Lang; page: PageKey };
+const d = dict[lang];
+const meta =
+  page === "home" ? d.home
+  : page === "editor" ? d.editor
+  : page === "privacy" ? d.privacy
+  : d.terms;
+---
+<Base lang={lang} page={page} title={meta.title} description={meta.description}>
+  {page === "home" && (
+    <>
+      <section class="hero">
+        <h1>{d.home.h1}</h1>
+        <p class="lead">{d.home.lead}</p>
+        <a class="btn primary lg" href={path(lang, "editor")}>{d.home.cta}</a>
+      </section>
+
+      <section aria-labelledby="steps-h">
+        <h2 id="steps-h">{d.home.stepsTitle}</h2>
+        <ol class="steps">
+          {d.home.steps.map((s) => <li>{s}</li>)}
+        </ol>
+      </section>
+
+      <section aria-labelledby="why-h" class="box">
+        <h2 id="why-h">{d.home.whyTitle}</h2>
+        <p>{d.home.why}</p>
+        <p><a href="https://www.mkn.gov.my/web/ms/2022/08/14/kad-pengenalan-tips-penjagaan-dan-palang-salinan/" rel="noopener">{d.home.mkn}</a></p>
+      </section>
+
+      <section aria-labelledby="trust-h">
+        <h2 id="trust-h">{d.home.trustTitle}</h2>
+        <ul class="plain-list">
+          {d.home.trust.map((s) => <li>{s}</li>)}
+        </ul>
+        <p><a href={path(lang, "privacy")}>{d.nav.privacy}</a></p>
+      </section>
+
+      <section aria-labelledby="faq-h">
+        <h2 id="faq-h">{d.home.faqTitle}</h2>
+        {d.home.faq.map((f) => (
+          <details>
+            <summary>{f.q}</summary>
+            <p class="muted">{f.a}</p>
+          </details>
+        ))}
+      </section>
+
+      <section class="hero" aria-label={d.home.cta}>
+        <a class="btn primary lg" href={path(lang, "editor")}>{d.home.cta}</a>
+      </section>
+    </>
+  )}
+
+  {page === "editor" && (
+    <>
+      <h1>{d.editor.h1}</h1>
+      <p class="lead">{d.editor.lead}</p>
+      <noscript><p class="notice bad">JavaScript is required: all image work happens in your browser.</p></noscript>
+      <Editor client:only="preact" lang={lang} homeHref={path(lang, "home")} privacyHref={path(lang, "privacy")} t={d.editor.t} />
+    </>
+  )}
+
+  {page === "privacy" && (
+    <article class="prose">
+      <h1>{d.privacy.h1}</h1>
+      {d.privacy.sections.map((s) => (
+        <section>
+          <h2>{s.h}</h2>
+          {s.p.map((p) => <p>{p}</p>)}
+        </section>
+      ))}
+    </article>
+  )}
+
+  {page === "terms" && (
+    <article class="prose">
+      <h1>{d.terms.h1}</h1>
+      <p class="muted">{d.terms.updated}</p>
+      {d.terms.sections.map((s) => (
+        <section>
+          <h2>{s.h}</h2>
+          {s.p.map((p) => <p>{p}</p>)}
+        </section>
+      ))}
+    </article>
+  )}
+</Base>
