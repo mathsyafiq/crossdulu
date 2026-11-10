@@ -3,6 +3,7 @@
 Free tool to cross (watermark) a copy of your ID before you send it. Everything runs in your browser: your images are never uploaded. No account, no credits, no payment. Bahasa Melayu and English.
 
 - Front and back on one A4 sheet, true card size (85.6 mm wide), PNG or PDF.
+- Take the picture in the page with a card-shaped guide box, choose a photo, or upload a PDF of your ID copy (front and back on one page are separated for you).
 - Text, date, opacity, angle, size and colour are adjustable.
 - Built with Astro, Preact, Canvas and pdf-lib. Static site, no server.
 

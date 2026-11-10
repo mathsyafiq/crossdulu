@@ -12,7 +12,7 @@ for (const l of readFileSync(join(ROOT, "public/_headers"), "utf8").split("\n").
   const m = l.trim().match(/^([\w-]+):\s*(.+)$/);
   if (m) headers[m[1]] = m[2];
 }
-const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml" };
+const MIME = { ".html": "text/html; charset=utf-8", ".js": "text/javascript", ".css": "text/css", ".svg": "image/svg+xml", ".mjs": "text/javascript" };
 
 http.createServer((req, res) => {
   const p = decodeURIComponent(req.url.split("?")[0]);

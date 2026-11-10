@@ -56,6 +56,22 @@ export interface EditorStrings {
   previewFront: string;
   previewBack: string;
   staysHere: string;
+  cameraTitle: string;
+  cameraPreview: string;
+  cameraStarting: string;
+  cameraHint: string;
+  cameraCapture: string;
+  cameraCancel: string;
+  cameraError: string;
+  cameraFallback: string;
+  pdfChoose: string;
+  pdfHint: string;
+  pdfWorking: string;
+  pdfSplit: string;
+  pdfOne: string;
+  swap: string;
+  errPdf: string;
+  errPdfPassword: string;
 }
 
 interface Dict {
@@ -163,6 +179,22 @@ export const dict: Record<Lang, Dict> = {
         previewFront: "Pratonton depan",
         previewBack: "Pratonton belakang",
         staysHere: "Gambar kekal dalam browser ini.",
+        cameraTitle: "Ambil gambar kad",
+        cameraPreview: "Paparan kamera",
+        cameraStarting: "Menghidupkan kamera...",
+        cameraHint: "Letakkan kad dalam kotak putih. Pastikan kad rata, terang dan semua tepi nampak, kemudian tekan Ambil gambar.",
+        cameraCapture: "Ambil gambar",
+        cameraCancel: "Batal",
+        cameraError: "Kamera tidak dapat dibuka. Benarkan akses kamera untuk laman ini dalam tetapan browser, atau guna aplikasi kamera telefon anda.",
+        cameraFallback: "Guna aplikasi kamera telefon",
+        pdfChoose: "Muat naik PDF salinan IC",
+        pdfHint: "Sudah ada salinan IC dalam PDF? Pilih fail itu dan kami asingkan depan dan belakang.",
+        pdfWorking: "Membaca PDF...",
+        pdfSplit: "Kad depan dan belakang ditemui dan diasingkan. Semak pratonton. Jika terbalik, tekan Tukar depan dan belakang.",
+        pdfOne: "Satu kad ditemui dalam PDF dan dimasukkan. Tambah sebelah lagi.",
+        swap: "Tukar depan dan belakang",
+        errPdf: "PDF tidak dapat dibaca. Cuba simpan semula sebagai PDF, atau guna gambar.",
+        errPdfPassword: "PDF ini berkata laluan. Buka dan simpan tanpa kata laluan dahulu.",
       },
     },
     privacy: {
@@ -170,7 +202,7 @@ export const dict: Record<Lang, Dict> = {
       description: "Apa yang berlaku pada gambar anda, apa yang disimpan dan apa yang tidak.",
       h1: "Privasi",
       sections: [
-        { h: "Gambar anda", p: ["Gambar yang anda pilih dibaca dan dilukis dalam browser anda. Ia tidak dihantar ke pelayan kami dan kami tidak menyimpan atau melihatnya. Fail yang anda muat turun dibuat pada peranti anda."] },
+        { h: "Gambar anda", p: ["Gambar yang anda pilih dibaca dan dilukis dalam browser anda. Ia tidak dihantar ke pelayan kami dan kami tidak menyimpan atau melihatnya. Fail yang anda muat turun dibuat pada peranti anda.","Jika anda guna kamera, gambar diambil dalam browser anda dan tidak dihantar ke mana-mana; kamera ditutup sebaik sahaja gambar diambil. PDF yang anda pilih dibaca dalam browser anda juga."] },
         { h: "Bagaimana ini dikuatkuasakan", p: ["Halaman editor menghantar peraturan keselamatan yang menyekat sebarang sambungan rangkaian daripada halaman itu. Maknanya, walaupun ada kesilapan kod, browser tidak membenarkan halaman menghantar gambar keluar. Anda boleh periksa tab Network dalam alat pembangun browser: tiada permintaan selepas halaman dimuatkan."] },
         { h: "Apa yang disimpan", p: ["Dalam browser anda sahaja: satu penanda bahawa anda telah membaca notis privasi. Tiada kuki penjejakan. Tiada akaun.", "Penyedia hosting mungkin menyimpan log pelayan biasa (contohnya alamat IP dan masa lawatan) untuk keselamatan. Log ini tidak mengandungi gambar anda."] },
         { h: "Selepas anda muat turun", p: ["Fail itu di bawah kawalan anda. Pastikan palang jelas sebelum berkongsi, dan hanya kongsi dengan pihak yang memerlukannya. Tiada alat yang dapat menjamin salinan tidak akan disalahguna."] },
@@ -269,6 +301,22 @@ export const dict: Record<Lang, Dict> = {
         previewFront: "Front preview",
         previewBack: "Back preview",
         staysHere: "Images stay in this browser.",
+        cameraTitle: "Take a picture of the card",
+        cameraPreview: "Camera view",
+        cameraStarting: "Starting the camera...",
+        cameraHint: "Put the card inside the white box. Keep it flat and well lit with all four edges visible, then press Take picture.",
+        cameraCapture: "Take picture",
+        cameraCancel: "Cancel",
+        cameraError: "The camera could not be opened. Allow camera access for this site in your browser settings, or use your phone's camera app.",
+        cameraFallback: "Use the phone's camera app",
+        pdfChoose: "Upload a PDF of your ID copy",
+        pdfHint: "Already have your ID copy as a PDF? Choose it and we separate the front and back.",
+        pdfWorking: "Reading the PDF...",
+        pdfSplit: "Found the front and back and separated them. Check the previews. If they are the wrong way round, press Swap front and back.",
+        pdfOne: "Found one card in the PDF and added it. Add the other side.",
+        swap: "Swap front and back",
+        errPdf: "The PDF could not be read. Try saving it again as a PDF, or use a picture.",
+        errPdfPassword: "This PDF is password protected. Open it and save a copy without a password first.",
       },
     },
     privacy: {
@@ -276,7 +324,7 @@ export const dict: Record<Lang, Dict> = {
       description: "What happens to your images, what is stored and what is not.",
       h1: "Privacy",
       sections: [
-        { h: "Your images", p: ["The images you choose are read and drawn in your browser. They are not sent to our server, and we do not store or see them. The file you download is created on your device."] },
+        { h: "Your images", p: ["The images you choose are read and drawn in your browser. They are not sent to our server, and we do not store or see them. The file you download is created on your device.","If you use the camera, the picture is taken in your browser and is not sent anywhere; the camera is switched off as soon as the picture is taken. A PDF you choose is also read in your browser."] },
         { h: "How this is enforced", p: ["The editor page is served with a security policy that blocks any network connection from the page. Even if there were a bug in the code, the browser would not let the page send an image out. You can check the Network tab in your browser's developer tools: there are no requests after the page has loaded."] },
         { h: "What is stored", p: ["In your browser only: one marker that you have read the privacy notice. No tracking cookies. No accounts.", "The hosting provider may keep ordinary server logs (for example IP address and visit time) for security. These logs do not contain your images."] },
         { h: "After you download", p: ["The file is under your control. Make sure the watermark is clear before you share, and share only with people who need it. No tool can guarantee a copy will not be misused."] },

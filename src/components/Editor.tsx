@@ -1,5 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { EditorStrings, Lang } from "../i18n/strings";
+import Camera from "./Camera";
+import { importPdf, isPdf, preloadPdfReader } from "../lib/pdfimport";
 import {
   type Surface, type Settings, type Warning,
   loadImage, LoadFailure, renderCard, checkSettings, exportPng, exportPdf, download, preloadPdf,
@@ -45,6 +47,8 @@ function Slot(props: {
   settings: Settings | null;
   error: string | null;
   onFile: (f: File) => void;
+  onCamera: () => void;
+  captureRef: { current: HTMLInputElement | null };
   onRemove: () => void;
   previewLabel: string;
 }) {
@@ -81,14 +85,12 @@ function Slot(props: {
       <div class="row">
         <label class={`btn ${value ? "secondary" : "primary"}`}>
           {value ? t.replace : t.choose}
-          <input class="visually-hidden" type="file" accept="image/*" onChange={pick} onKeyDown={enterOpens} />
+          <input class="visually-hidden" type="file" accept="image/*,application/pdf,.pdf" onChange={pick} onKeyDown={enterOpens} />
         </label>
-        {!value && (
-          <label class="btn secondary">
-            {t.camera}
-            <input class="visually-hidden" type="file" accept="image/*" capture="environment" onChange={pick} onKeyDown={enterOpens} />
-          </label>
-        )}
+        {!value && <button type="button" class="btn secondary" onClick={props.onCamera}>{t.camera}</button>}
+        {/* Fallback when the live camera is unavailable: the phone's own camera app. */}
+        <input ref={props.captureRef} class="visually-hidden" type="file" accept="image/*" capture="environment"
+          tabIndex={-1} aria-hidden="true" onChange={pick} />
         {value && (
           <button type="button" class="btn ghost" onClick={props.onRemove}>{t.remove}</button>
         )}
@@ -143,6 +145,9 @@ export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
   const [scale, setScale] = useState(DEFAULT_SCALE);
   const [colour, setColour] = useState<string>(WATERMARK_COLORS[0]);
   const [busy, setBusy] = useState<null | "png" | "pdf">(null);
+  const [cameraFor, setCameraFor] = useState<null | "front" | "back">(null);
+  const captureFront = useRef<HTMLInputElement | null>(null);
+  const captureBack = useRef<HTMLInputElement | null>(null);
   const [status, setStatus] = useState<{ kind: "ok" | "bad"; msg: string } | null>(null);
 
   useEffect(() => {
@@ -158,16 +163,55 @@ export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
     setConsent(true);
   };
 
-  const loadInto = async (file: File, set: (s: Surface) => void, setErr: (e: string | null) => void) => {
-    setErr(null);
+  const setters = {
+    front: { set: setFront, err: setErrFront },
+    back: { set: setBack, err: setErrBack },
+  };
+  const failMsg = (e: unknown) => {
+    const code = e instanceof LoadFailure ? e.code : "decode";
+    return code === "type" ? t.errType : code === "size" ? t.errSize : code === "pdf" ? t.errPdf : code === "password" ? t.errPdfPassword : t.errDecode;
+  };
+
+  /** A picture file, or a PDF of an ID copy. `side` null means: put it in the first empty slot. */
+  const handleFile = async (file: File, side: "front" | "back" | null) => {
+    setErrFront(null);
+    setErrBack(null);
     setStatus(null);
+    const target = side ?? (!front ? "front" : !back ? "back" : "front");
     try {
-      set(await loadImage(file));
+      if (isPdf(file)) {
+        setStatus({ kind: "ok", msg: t.pdfWorking });
+        const cards = await importPdf(file);
+        if (cards.length >= 2) {
+          setFront(cards[0]);
+          setBack(cards[1]);
+          setStatus({ kind: "ok", msg: t.pdfSplit });
+        } else {
+          setters[target].set(cards[0]);
+          setStatus({ kind: "ok", msg: t.pdfOne });
+        }
+      } else {
+        setters[target].set(await loadImage(file));
+      }
       preloadPdf();
     } catch (e) {
-      const code = e instanceof LoadFailure ? e.code : "decode";
-      setErr(code === "type" ? t.errType : code === "size" ? t.errSize : t.errDecode);
+      setStatus(null);
+      setters[target].err(failMsg(e));
     }
+  };
+
+  const captured = (side: "front" | "back", s: Surface) => {
+    setters[side].set(s);
+    setErrFront(null);
+    setErrBack(null);
+    setStatus(null);
+    setCameraFor(null);
+  };
+
+  const swap = () => {
+    const f = front;
+    setFront(back);
+    setBack(f);
   };
 
   const trimmed = text.trim();
@@ -201,15 +245,33 @@ export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
 
   return (
     <div class="editor" lang={lang}>
+      {cameraFor && consent && (
+        <Camera t={t} onCapture={(sf) => captured(cameraFor, sf)} onClose={() => setCameraFor(null)}
+          onFallback={() => { const r = cameraFor === "front" ? captureFront : captureBack; setCameraFor(null); r.current?.click(); }} />
+      )}
       {!consent && <ConsentModal t={t} homeHref={homeHref} privacyHref={privacyHref} onAccept={accept} />}
       <div class="editor-grid" aria-hidden={!consent} inert={!consent}>
         <div class="slots">
+          <div class="pdf-pick">
+            <label class="btn secondary" onPointerEnter={preloadPdfReader} onTouchStart={preloadPdfReader}>
+              {t.pdfChoose}
+              <input class="visually-hidden" type="file" accept="application/pdf,.pdf" onFocus={preloadPdfReader} onChange={(e) => {
+                const f = (e.target as HTMLInputElement).files?.[0];
+                if (f) handleFile(f, null);
+                (e.target as HTMLInputElement).value = "";
+              }} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.currentTarget as HTMLInputElement).click(); } }} />
+            </label>
+            <span class="muted small">{t.pdfHint}</span>
+          </div>
           <Slot id="front" label={t.front} t={t} value={front} settings={both ? settings : null}
-            error={errFront} onFile={(f) => loadInto(f, setFront, setErrFront)}
+            error={errFront} onFile={(f) => handleFile(f, "front")}
+            onCamera={() => setCameraFor("front")} captureRef={captureFront}
             onRemove={() => setFront(null)} previewLabel={t.previewFront} />
           <Slot id="back" label={t.back} t={t} value={back} settings={both ? settings : null}
-            error={errBack} onFile={(f) => loadInto(f, setBack, setErrBack)}
+            error={errBack} onFile={(f) => handleFile(f, "back")}
+            onCamera={() => setCameraFor("back")} captureRef={captureBack}
             onRemove={() => setBack(null)} previewLabel={t.previewBack} />
+          {both && <div class="row"><button type="button" class="btn ghost" onClick={swap}>{t.swap}</button></div>}
           <p class="muted small">{t.staysHere}</p>
         </div>
 

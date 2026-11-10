@@ -40,7 +40,7 @@ export const browserSurface: MakeSurface = (w, h) => {
   return c;
 };
 
-export type LoadError = "type" | "size" | "decode";
+export type LoadError = "type" | "size" | "decode" | "pdf" | "password";
 export class LoadFailure extends Error {
   code: LoadError;
   constructor(code: LoadError) {

@@ -11,7 +11,7 @@ export default defineConfig({
     baseURL: "http://localhost:4321",
     viewport: { width: 1440, height: 900 },
     acceptDownloads: true,
-    launchOptions: { executablePath: "/usr/bin/google-chrome", args: ["--no-sandbox"] },
+    launchOptions: { executablePath: "/usr/bin/google-chrome", args: ["--no-sandbox", "--use-fake-device-for-media-stream", "--use-fake-ui-for-media-stream"] },
   },
   webServer: {
     command: "node e2e/serve.mjs",
