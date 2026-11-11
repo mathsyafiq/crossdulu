@@ -147,6 +147,8 @@ export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
   const [angle, setAngle] = useState(DEFAULT_ANGLE);
   const [position, setPosition] = useState<Position>(DEFAULT_POSITION);
   const [scale, setScale] = useState(CORNER_SCALE);
+  const [hx, setHx] = useState(0);
+  const [vy, setVy] = useState(0);
   const [colour, setColour] = useState<string>(WATERMARK_COLORS[0]);
   const [busy, setBusy] = useState<null | "png" | "pdf">(null);
   const [cameraFor, setCameraFor] = useState<null | "front" | "back">(null);
@@ -220,7 +222,7 @@ export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
 
   const trimmed = text.trim();
   const full = trimmed ? (addDate ? `${trimmed} ${today()}` : trimmed) : "";
-  const settings: Settings = { text: full, opacity, angle, color: colour, scale, position };
+  const settings: Settings = { text: full, opacity, angle, color: colour, scale, position, hx, vy };
   const warnings: Warning[] = checkSettings(settings);
   const both = !!front && !!back;
   const canExport = both && !warnings.includes("empty") && busy === null;
@@ -317,6 +319,22 @@ export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
                 </div>
               </div>
               {position === "corner" && <p class="notice info">{t.cornerNote}</p>}
+              {position === "corner" && (
+                <>
+                  <div class="field">
+                    <label for="wm-hx">{t.moveX}: {Math.round(hx * 100)}%</label>
+                    <input id="wm-hx" type="range" min="0" max="100" step="1" value={Math.round(hx * 100)}
+                      aria-valuetext={`${Math.round(hx * 100)}%`}
+                      onInput={(e) => setHx(Number((e.target as HTMLInputElement).value) / 100)} />
+                  </div>
+                  <div class="field">
+                    <label for="wm-vy">{t.moveY}: {Math.round(vy * 100)}%</label>
+                    <input id="wm-vy" type="range" min="0" max="100" step="1" value={Math.round(vy * 100)}
+                      aria-valuetext={`${Math.round(vy * 100)}%`}
+                      onInput={(e) => setVy(Number((e.target as HTMLInputElement).value) / 100)} />
+                  </div>
+                </>
+              )}
 
               <div class="field">
                 <label for="wm-op">{t.opacity}: {Math.round(opacity * 100)}%</label>

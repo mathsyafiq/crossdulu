@@ -59,6 +59,8 @@ export interface EditorStrings {
   position: string;
   positionCorner: string;
   positionMiddle: string;
+  moveX: string;
+  moveY: string;
   cornerNote: string;
   cameraTitle: string;
   cameraPreview: string;
@@ -186,6 +188,8 @@ export const dict: Record<Lang, Dict> = {
         position: "Kedudukan palang",
         positionCorner: "Sudut kiri atas",
         positionMiddle: "Tengah kad",
+        moveX: "Kedudukan mendatar (kiri ke kanan)",
+        moveY: "Kedudukan menegak (atas ke bawah)",
         cornerNote: "Palang diletak di sudut kiri atas kad, dalam satu baris, dan boleh keluar sedikit daripada tepi kad. Semak pratonton dan laraskan Saiz palang supaya tidak menutup muka, nama dan nombor IC. Palang di sudut lebih mudah dipotong keluar: pilih Tengah kad untuk perlindungan yang lebih kuat.",
         cameraTitle: "Ambil gambar kad",
         cameraPreview: "Paparan kamera",
@@ -312,6 +316,8 @@ export const dict: Record<Lang, Dict> = {
         position: "Band position",
         positionCorner: "Top-left corner",
         positionMiddle: "Across the middle",
+        moveX: "Horizontal position (left to right)",
+        moveY: "Vertical position (top to bottom)",
         cornerNote: "The band sits in the top-left corner of the card, on one line, and may run a little past the edge of the card. Check the preview and adjust Band size so it does not cover the face, name or ID number. A corner band is easier to crop out: choose Across the middle for stronger protection.",
         cameraTitle: "Take a picture of the card",
         cameraPreview: "Camera view",

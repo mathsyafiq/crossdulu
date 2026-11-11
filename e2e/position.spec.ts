@@ -82,4 +82,34 @@ test.describe("F08 band position", () => {
     await page.keyboard.press("Enter");
     await expect(mid).toHaveAttribute("aria-checked", "true");
   });
+
+  test("F08-E4 the horizontal and vertical sliders move the band where the user wants it", async ({ page }) => {
+    await openEditor(page);
+    await loadBoth(page);
+    await page.getByLabel("Teks palang").fill("BANK ABC");
+    const hx = page.getByLabel(/Kedudukan mendatar/), vy = page.getByLabel(/Kedudukan menegak/);
+    await expect.poll(() => redIn(page, "front", [0, 0, 0.3, 0.45])).toBeGreaterThan(300); // starts in the corner
+    await hx.fill("100");
+    await expect.poll(() => redIn(page, "front", [0, 0, 0.5, 1])).toBe(0);
+    await expect.poll(() => redIn(page, "front", [0.7, 0, 1, 0.5])).toBeGreaterThan(300);
+    await hx.fill("0");
+    await vy.fill("100");
+    await expect.poll(() => redIn(page, "front", [0, 0, 1, 0.5])).toBe(0);
+    await expect.poll(() => redIn(page, "front", [0, 0.5, 0.3, 1])).toBeGreaterThan(300);
+    // the same position is used for the back card, and for the middle option the sliders are not shown
+    await expect.poll(() => redIn(page, "back", [0, 0.5, 0.3, 1])).toBeGreaterThan(300);
+    await page.getByRole("radio", { name: "Tengah kad" }).click();
+    await expect(hx).toBeHidden();
+  });
+
+  test("F08-E5 the position sliders can be used by keyboard and have labels in English", async ({ page }) => {
+    await openEditor(page, "en");
+    await loadBoth(page);
+    await page.getByLabel("Watermark text").fill("BANK ABC");
+    const hx = page.getByLabel(/Horizontal position/);
+    await hx.focus();
+    for (let i = 0; i < 10; i++) await page.keyboard.press("ArrowRight");
+    await expect(hx).toHaveValue("10");
+    await expect(page.getByLabel(/Vertical position/)).toBeVisible();
+  });
 });

@@ -254,6 +254,31 @@ test("the exported sheet shows the band running out past the card, on the white 
   assert.ok(red > 20, `red pixels above/left of the front card: ${red}`);
 });
 
+test("the position sliders move the band along the card: 0 is the corner, 1 is the far side", () => {
+  const ctx = createCanvas(10, 10).getContext("2d");
+  const at = (hx, vy) => layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, text: "BANK ABC", hx, vy });
+  const corner = at(0, 0), right = at(1, 0), down = at(0, 1), mid = at(0.5, 0);
+  assert.equal(corner.mx, at(undefined, undefined).mx, "default is the corner");
+  assert.ok(corner.mx < mid.mx && mid.mx < right.mx);
+  assert.ok(Math.abs(right.mx - (CARD_PX_W - corner.mx)) < 1, "ends the same distance from the far side");
+  assert.ok(corner.my < down.my && Math.abs(down.my - (638 - corner.my)) < 1);
+  assert.equal(right.my, corner.my);
+  assert.ok(at(5, -3).mx === right.mx && at(5, -3).my === corner.my, "values outside 0-1 are clamped");
+  // and the pixels really move
+  const r = changed({ ...cornerBase, text: "BANK ABC", hx: 1 });
+  assert.ok(r.inCard.length > 300 && Math.min(...r.inCard.map((p) => p[0])) > 0.45 * CARD_PX_W, "band is on the right");
+  const d = changed({ ...cornerBase, text: "BANK ABC", vy: 1 });
+  assert.ok(d.inCard.length > 300 && Math.min(...d.inCard.map((p) => p[1])) > 0.45 * 638, "band is low on the card");
+});
+
+test("the band never sticks out past the limit wherever it is moved", () => {
+  const ctx = createCanvas(10, 10).getContext("2d");
+  for (const hx of [0, 0.3, 1]) for (const vy of [0, 0.5, 1]) for (const text of ["BANK", base.text]) {
+    const { bleed, size } = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, text, hx, vy, scale: 1 });
+    assert.ok(Math.max(bleed.l, bleed.t, bleed.r, bleed.b) <= MAX_BLEED * 638 + 1 || size <= 9, `${hx} ${vy} ${text.slice(0, 5)}`);
+  }
+});
+
 test("the small-size warning only applies to a band across the middle", () => {
   assert.ok(!checkSettings({ ...cornerBase, scale: 0.4 }).includes("small"));
   assert.ok(checkSettings({ ...base, scale: 0.4 }).includes("small"));

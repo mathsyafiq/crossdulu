@@ -15,6 +15,8 @@ export interface Settings {
   color: string;
   scale?: number; // 0.4 - 1, size of the band and text (in the corner: how far it reaches), default 1
   position?: Position; // "corner" (default): across the top-left corner only. "middle": across the whole card.
+  hx?: number; // 0 - 1: slides the corner band along the card, left to right (0 = in the corner)
+  vy?: number; // 0 - 1: slides the corner band down the card, top to bottom (0 = in the corner)
 }
 export type Position = "corner" | "middle";
 export const DEFAULT_POSITION: Position = "corner";
@@ -163,6 +165,7 @@ export function layoutCorner(ctx: any, w: number, h: number, s: Settings): Corne
   const phi = (Math.min(75, Math.max(15, Math.abs(s.angle))) * Math.PI) / 180;
   const sin = Math.sin(phi), cos = Math.cos(phi);
   const limit = MAX_BLEED * Math.min(w, h);
+  const hx = Math.min(1, Math.max(0, s.hx ?? 0)), vy = Math.min(1, Math.max(0, s.vy ?? 0));
   let size = Math.max(9, h * 0.065 * scale);
   for (let i = 0; i < 40; i++) {
     ctx.font = `800 ${size}px ${FONT}`;
@@ -170,7 +173,9 @@ export function layoutCorner(ctx: any, w: number, h: number, s: Settings): Corne
     const band = size * 1.5;
     const len = width + size * 1.2;
     const D = 2.5 * size; // the band's middle line is this far from the corner
-    const mx = D / sin / 2, my = D / cos / 2;
+    const mx0 = D / sin / 2, my0 = D / cos / 2; // middle of the band when it sits in the corner
+    // The sliders move it along the card, from the corner to the opposite side (never past the same distance from that side).
+    const mx = mx0 + hx * Math.max(0, w - 2 * mx0), my = my0 + vy * Math.max(0, h - 2 * my0);
     // The band's four corners: the middle point, half the length along it, half the thickness across it.
     const ux = cos, uy = -sin, nx = sin, ny = cos;
     const xs: number[] = [], ys: number[] = [];
