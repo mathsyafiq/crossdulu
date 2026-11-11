@@ -6,8 +6,10 @@ async function redIn(page: Page, side: "front" | "back", box: [number, number, n
   return page.evaluate(
     ({ side, box }) => {
       const c = document.querySelector(`section[aria-labelledby=${side}-h] canvas`) as HTMLCanvasElement;
-      const x0 = Math.round(box[0] * c.width), y0 = Math.round(box[1] * c.height);
-      const w = Math.round((box[2] - box[0]) * c.width), h = Math.round((box[3] - box[1]) * c.height);
+      const [pl, pt, pr, pb] = (c.dataset.pad ?? "0,0,0,0").split(",").map(Number); // room around the card
+      const cw = c.width - pl - pr, ch = c.height - pt - pb;
+      const x0 = pl + Math.round(box[0] * cw), y0 = pt + Math.round(box[1] * ch);
+      const w = Math.max(1, Math.round((box[2] - box[0]) * cw)), h = Math.max(1, Math.round((box[3] - box[1]) * ch));
       const d = c.getContext("2d")!.getImageData(x0, y0, w, h).data;
       let n = 0;
       for (let i = 0; i < d.length; i += 4) if (d[i] > 180 && d[i + 1] < 120 && d[i + 2] < 120) n++;
@@ -16,7 +18,7 @@ async function redIn(page: Page, side: "front" | "back", box: [number, number, n
     { side, box },
   );
 }
-const CORNER: [number, number, number, number] = [0, 0, 0.38, 0.6];
+const CORNER: [number, number, number, number] = [0, 0, 0.3, 0.45];
 const MIDDLE: [number, number, number, number] = [0.3, 0.3, 0.8, 0.8];
 
 test.describe("F08 band position", () => {
@@ -29,7 +31,10 @@ test.describe("F08 band position", () => {
     expect(await redIn(page, "front", MIDDLE), "front middle").toBe(0);
     expect(await redIn(page, "front", [0.5, 0, 1, 1]), "front right half").toBe(0);
     expect(await redIn(page, "back", MIDDLE), "back middle").toBe(0);
-    await expect(page.getByText("dijauhkan daripada bahagian tengah kad")).toBeVisible();
+    await expect(page.getByText("dalam satu baris")).toBeVisible();
+    // the band runs out past the card: the preview has room around the card
+    const pad = await page.locator("section[aria-labelledby=front-h] canvas").getAttribute("data-pad");
+    expect(pad!.split(",").map(Number).slice(0, 2).every((n) => n > 0), `room around the card: ${pad}`).toBe(true);
   });
 
   test("F08-H2 choosing the middle puts the band across the card, and back to the corner clears it again", async ({ page }) => {
@@ -41,10 +46,10 @@ test.describe("F08 band position", () => {
     await expect(page.getByLabel(/Saiz palang/)).toHaveValue("100");
     await page.getByRole("radio", { name: "Sudut kiri atas" }).click();
     await expect.poll(() => redIn(page, "front", MIDDLE)).toBe(0);
-    await expect(page.getByLabel(/Saiz palang/)).toHaveValue("60");
+    await expect(page.getByLabel(/Saiz palang/)).toHaveValue("75");
   });
 
-  test("F08-E1 the size slider changes how far the corner band reaches; every angle stays in the corner", async ({ page }) => {
+  test("F08-E1 the size slider changes the band size; every angle keeps the lower right of the card clear", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page);
     await page.getByLabel("Teks palang").fill("KHAS UNTUK BANK ABC");
@@ -53,10 +58,10 @@ test.describe("F08 band position", () => {
     await expect.poll(() => redIn(page, "front", [0.3, 0, 1, 1])).toBe(0);
     const small = await redIn(page, "front", CORNER);
     await sz.fill("100");
-    await expect.poll(() => redIn(page, "front", CORNER)).toBeGreaterThan(small);
+    await expect.poll(() => redIn(page, "front", [0, 0, 0.6, 0.8])).toBeGreaterThan(small);
     for (const a of ["-10", "-45", "-80"]) {
       await page.getByLabel(/Sudut/).fill(a);
-      await expect.poll(() => redIn(page, "front", [0.58, 0.62, 1, 1]), `angle ${a}`).toBe(0);
+      await expect.poll(() => redIn(page, "front", [0.62, 0.62, 1, 1]), `angle ${a}`).toBe(0);
     }
   });
 

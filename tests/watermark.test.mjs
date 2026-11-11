@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createCanvas } from "@napi-rs/canvas";
 import { writeFileSync, mkdirSync } from "node:fs";
 import {
-  renderCard, exportPng, exportPdf, layoutSheet, checkSettings, chordLength, layoutBand, layoutCorner, drawWatermark, planSheetMm,
+  renderCard, exportPng, exportPdf, layoutSheet, checkSettings, chordLength, layoutBand, layoutCorner, MAX_BLEED, surfaceRectMm, planSheetMm,
   CARD_PX_W, DEFAULT_ANGLE, DEFAULT_OPACITY,
 } from "../src/lib/watermark.ts";
 
@@ -159,79 +159,97 @@ test("BUG-002: tall cards are scaled to fit the A4 sheet, normal cards stay true
   for (const r of normal) assert.ok(bounds(r));
 });
 
-// ---- Band across the top-left corner only ----
+// ---- Band across the top-left corner: one line, may run out past the card ----
 
-function changed(settings, w = CARD_PX_W, h = 638) {
-  const grey = (c) => { const g = c.getContext("2d"); g.fillStyle = "#b0bec5"; g.fillRect(0, 0, w, h); };
-  const a = make(w, h), b = make(w, h);
-  grey(a); grey(b);
-  drawWatermark(b.getContext("2d"), w, h, settings);
-  const A = a.getContext("2d").getImageData(0, 0, w, h).data, B = b.getContext("2d").getImageData(0, 0, w, h).data;
-  const pts = [];
-  for (let y = 0; y < h; y++) for (let x = 0; x < w; x++) {
-    const i = (y * w + x) * 4;
-    if (A[i] !== B[i] || A[i + 1] !== B[i + 1] || A[i + 2] !== B[i + 2]) pts.push([x, y]);
+const grey = () => { const c = make(CARD_PX_W, 638); const g = c.getContext("2d"); g.fillStyle = "#b0bec5"; g.fillRect(0, 0, CARD_PX_W, 638); return c; };
+
+/** Changed pixels of a rendered card, in card coordinates (the card's own top-left is 0,0). */
+function changed(settings) {
+  const out = renderCard(grey(), settings, make);
+  const bl = out.bleed ?? { l: 0, t: 0, r: 0, b: 0 };
+  const ref = make(out.width, out.height);
+  const g = ref.getContext("2d"); g.clearRect(0, 0, out.width, out.height); g.drawImage(grey(), bl.l, bl.t);
+  const A = g.getImageData(0, 0, out.width, out.height).data, B = out.getContext("2d").getImageData(0, 0, out.width, out.height).data;
+  const inCard = [], outside = [];
+  for (let y = 0; y < out.height; y++) for (let x = 0; x < out.width; x++) {
+    const i = (y * out.width + x) * 4;
+    if (A[i] === B[i] && A[i + 1] === B[i + 1] && A[i + 2] === B[i + 2] && A[i + 3] === B[i + 3]) continue;
+    const cx = x - bl.l, cy = y - bl.t;
+    (cx >= 0 && cy >= 0 && cx < CARD_PX_W && cy < 638 ? inCard : outside).push([cx, cy]);
   }
-  return pts;
+  return { inCard, outside, bleed: bl, out };
 }
 
 test("corner is the default position", () => {
   const { position, ...noPos } = base;
-  const a = changed(noPos), b = changed(cornerBase);
-  assert.equal(a.length, b.length);
+  assert.equal(changed(noPos).inCard.length, changed(cornerBase).inCard.length);
 });
 
-test("corner band touches only the top-left: the middle, right side and bottom stay untouched", () => {
-  for (const text of ["KHAS UNTUK BANK SAHAJA 10/11/2026", "BANK ABC", "UNTUK PERMOHONAN KERJA SYARIKAT ABC SAHAJA 27/9/2026"]) {
-    const pts = changed({ ...cornerBase, text });
-    assert.ok(pts.length > 800, `${text}: band drawn`);
-    const maxX = Math.max(...pts.map((p) => p[0])), maxY = Math.max(...pts.map((p) => p[1]));
-    assert.ok(maxX < 0.5 * CARD_PX_W, `${text}: reaches x=${maxX}`);
-    assert.ok(maxY < 0.62 * 638, `${text}: reaches y=${maxY}`);
-    assert.ok(!pts.some(([x, y]) => Math.abs(x - CARD_PX_W / 2) < 120 && Math.abs(y - 319) < 120), `${text}: centre untouched`);
+test("corner band: the part over the card stays small and in the top-left; the rest runs out past the card", () => {
+  for (const text of ["FOR PRIVATE USE ONLY", "KHAS UNTUK BANK SAHAJA 10/11/2026", "BANK ABC"]) {
+    const { inCard, outside, bleed } = changed({ ...cornerBase, text, scale: 0.8 });
+    assert.ok(inCard.length > 300, `${text}: drawn over the card`);
+    assert.ok(Math.max(...inCard.map((p) => p[0])) < 0.3 * CARD_PX_W, `${text}: reaches x=${Math.max(...inCard.map((p) => p[0]))}`);
+    assert.ok(Math.max(...inCard.map((p) => p[1])) < 0.42 * 638, `${text}: reaches y=${Math.max(...inCard.map((p) => p[1]))}`);
+    assert.ok(!inCard.some(([x, y]) => x > 0.35 * CARD_PX_W && y > 0.45 * 638), `${text}: middle and lower right untouched`);
+    assert.ok(bleed.l > 0 && bleed.t > 0 && outside.length > 300, `${text}: runs out past the card (${bleed.l},${bleed.t})`);
   }
 });
 
-test("corner band reach stays inside its limit at every angle, and shrinks with the size slider", () => {
+test("corner text is a single line, and the size slider sets its size", () => {
+  const ctx = createCanvas(10, 10).getContext("2d");
+  const text = "UNTUK PERMOHONAN KERJA SYARIKAT ABC SAHAJA 27/9/2026";
+  const L = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, text, scale: 0.8 });
+  assert.equal(L.line, text);
+  const small = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, text: "BANK ABC", scale: 0.4 });
+  const big = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, text: "BANK ABC", scale: 1 });
+  assert.ok(small.size < big.size);
+});
+
+test("corner band never sticks out of the card by more than the limit, at any angle or text length", () => {
   const ctx = createCanvas(10, 10).getContext("2d");
   for (const angle of [-15, -30, -45, -60, -75, -80, -10]) {
-    for (const text of ["BANK ABC", base.text, "x ".repeat(44).trim()]) {
-      const L = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, angle, text });
-      assert.ok(L.reachTop <= 0.56 * CARD_PX_W + 1, `${angle} ${text.slice(0, 8)}: top ${Math.round(L.reachTop)}`);
-      assert.ok(L.reachLeft <= 0.56 * 638 + 1, `${angle} ${text.slice(0, 8)}: left ${Math.round(L.reachLeft)}`);
-      assert.ok(L.size >= 9 && L.lines.length >= 1 && L.lines.length <= 2);
+    for (const text of ["BANK", base.text, "x ".repeat(44).trim()]) {
+      for (const scale of [0.4, 1]) {
+        const { bleed, size } = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, angle, text, scale });
+        const worst = Math.max(bleed.l, bleed.t, bleed.r, bleed.b);
+        assert.ok(worst <= MAX_BLEED * 638 + 1 || size <= 9, `${angle} ${text.slice(0, 8)} ${scale}: sticks out ${worst}`);
+      }
     }
   }
-  const big = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, scale: 1 });
-  const small = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, scale: 0.4 });
-  assert.ok(small.reachTop < big.reachTop && small.reachLeft < big.reachLeft);
 });
 
-test("corner text is big enough to read, and long text goes onto two lines", () => {
+test("a longer text is the same size as a short one unless it would stick out too far", () => {
   const ctx = createCanvas(10, 10).getContext("2d");
-  const L = layoutCorner(ctx, CARD_PX_W, 638, cornerBase);
-  assert.equal(L.lines.length, 2);
-  assert.ok(L.size >= 14, `size ${L.size}`); // depends on the machine's fonts: wide fallback fonts give smaller text
-  const short = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, text: "BANK" });
-  assert.equal(short.lines.length, 1);
-  assert.ok(short.reachTop < L.reachTop, "short text hugs the corner more tightly");
+  const a = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, text: "FOR PRIVATE USE ONLY", scale: 0.8 });
+  const b = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, text: "FOR PRIVATE USE ONLY 10/11/2026", scale: 0.8 });
+  assert.equal(a.size, b.size);
+  assert.ok(a.size >= 28, `size ${a.size}`);
 });
 
-test("corner text lines fit inside the band's visible length", () => {
-  const ctx = createCanvas(10, 10).getContext("2d");
-  for (const text of [base.text, "UNTUK PERMOHONAN KERJA SYARIKAT ABC SAHAJA 27/9/2026", "SEWA RUMAH 27/9/2026"]) {
-    const L = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, text });
-    ctx.font = `800 ${L.size}px Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial, sans-serif`;
-    const widest = Math.max(...L.lines.map((l) => ctx.measureText(l).width));
-    const phi = Math.abs(L.angle);
-    const chord = (Math.hypot(L.mx * 2, L.my * 2)); // length of the centre line between the two card edges
-    assert.ok(widest <= chord, `${text.slice(0, 10)}: ${Math.round(widest)} > ${Math.round(chord)} (phi ${phi.toFixed(2)})`);
-    // the text block's edge nearest the corner has a shorter stretch of band: the widest line must still fit there
-    const centreDist = Math.hypot(L.mx, L.my) * Math.sin(2 * phi) / 1; // = D * (something); recomputed below
-    const D = (L.mx * 2) * Math.sin(phi);
-    const nearChord = (D - L.lines.length * L.size * 0.6) / (Math.sin(phi) * Math.cos(phi));
-    assert.ok(widest <= nearChord + 1, `${text.slice(0, 10)}: widest ${Math.round(widest)} > chord at the near edge ${Math.round(nearChord)}`);
+test("the sheet keeps the card at true size and room for the band that runs out, without touching the other card", () => {
+  const f = renderCard(grey(), cornerBase, make), b = renderCard(grey(), cornerBase, make);
+  assert.ok(f.bleed.t > 0 && f.width > CARD_PX_W);
+  const cards = planSheetMm([f, b]);
+  assert.ok(Math.abs(cards[0].w - 85.6) < 0.01, "card still true size");
+  for (const [i, c] of [f, b].entries()) {
+    const r = surfaceRectMm(c, cards[i]);
+    assert.ok(r.x >= 0 && r.y >= 0 && r.x + r.w <= 210 && r.y + r.h <= 297, `surface ${i} inside the page`);
+    assert.ok(r.x <= cards[i].x && r.y <= cards[i].y, "surface contains the card");
   }
+  const rb = surfaceRectMm(b, cards[1]);
+  assert.ok(rb.y >= cards[0].y + cards[0].h, "the back card's band does not reach the front card");
+});
+
+test("the exported sheet shows the band running out past the card, on the white page", () => {
+  const f = renderCard(grey(), cornerBase, make), b = renderCard(grey(), cornerBase, make);
+  const sheet = layoutSheet(f, b, 100, make);
+  const cards = planSheetMm([f, b]);
+  const px = (mm) => Math.round((mm / 25.4) * 100);
+  const above = sheet.getContext("2d").getImageData(px(cards[0].x - 12), px(cards[0].y - 12), px(40), px(12)).data;
+  let red = 0;
+  for (let i = 0; i < above.length; i += 4) if (above[i] > 150 && above[i + 1] < 150) red++;
+  assert.ok(red > 20, `red pixels above/left of the front card: ${red}`);
 });
 
 test("the small-size warning only applies to a band across the middle", () => {

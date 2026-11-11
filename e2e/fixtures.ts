@@ -85,6 +85,8 @@ export const isBlue = (r: number, g: number, b: number) => b > 150 && b - r > 70
 export async function canvasSize(page: Page, side: "front" | "back") {
   return page.evaluate((side) => {
     const c = document.querySelector(`section[aria-labelledby=${side}-h] canvas`) as HTMLCanvasElement;
-    return { w: c.width, h: c.height };
+    // Size of the card itself: a band that runs out past the card adds room around it (data-pad = left,top,right,bottom).
+    const [l, t, r, b] = (c.dataset.pad ?? "0,0,0,0").split(",").map(Number);
+    return { w: c.width - l - r, h: c.height - t - b };
   }, side);
 }

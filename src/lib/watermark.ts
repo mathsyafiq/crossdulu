@@ -134,86 +134,66 @@ export function layoutBand(ctx: any, w: number, h: number, s: Settings): BandLay
 }
 
 
+export interface Bleed { l: number; t: number; r: number; b: number }
+
 export interface CornerLayout {
   size: number; // font px
-  lines: string[]; // one or two lines of text, first line nearest the corner
+  line: string; // the text, always on one line
   band: number; // distance between the two lines, px
-  mx: number; // middle of the band's centre line, px from the card's top-left
+  len: number; // length of the two lines, px
+  mx: number; // middle of the band, px from the card's top-left
   my: number;
   angle: number; // radians
-  /** How far the band's outer edge reaches along the top and the left edge (px), for checks. */
-  reachTop: number;
-  reachLeft: number;
+  /** How far the band sticks out past each edge of the card, px. */
+  bleed: Bleed;
 }
 
+/** The band may stick out of the card by at most this share of the card's shorter side. */
+export const MAX_BLEED = 0.3;
+
 /**
- * Lays the band across the top-left corner only, so it stays clear of the middle of the card
- * where the photo, name and ID number usually are. The text is made as large as fits, and is
- * split over two lines when that makes it clearly bigger.
+ * Lays one line of text, between two parallel lines, across the top-left corner of the card.
+ * The band is allowed to run out past the card's edges (the card is drawn with extra room for it),
+ * so the part over the card stays small and clear of the face, name and ID number.
+ * The text size follows the size slider; it is only reduced when the band would stick out too far.
  */
 export function layoutCorner(ctx: any, w: number, h: number, s: Settings): CornerLayout {
   const text = s.text.trim().replace(/\s+/g, " ");
   const scale = Math.min(1, Math.max(MIN_SCALE, s.scale ?? DEFAULT_SCALE));
   const phi = (Math.min(75, Math.max(15, Math.abs(s.angle))) * Math.PI) / 180;
-  const sin = Math.sin(phi), cos = Math.cos(phi), sc = sin * cos;
-  const r = 0.28 + 0.27 * scale; // reach as a share of the card's width and height
-  const farMax = Math.min(w * r * sin, h * r * cos); // outer edge's distance from the corner
-  const cap = Math.max(10, Math.round(h * 0.11 * scale)); // never bigger than the middle-of-card text
-
-  const options: string[][] = [[text]];
-  const words = text.split(" ");
-  if (words.length > 1) {
-    let best = 1, bestGap = Infinity;
-    for (let i = 1; i < words.length; i++) {
-      const gap = Math.abs(words.slice(0, i).join(" ").length - words.slice(i).join(" ").length);
-      if (gap < bestGap) { bestGap = gap; best = i; }
-    }
-    options.push([words.slice(0, best).join(" "), words.slice(best).join(" ")]);
-  }
-
-  const fit = (lines: string[]) => {
-    const n = lines.length;
-    ctx.font = `800 100px ${FONT}`;
-    const k = Math.max(...lines.map((l) => ctx.measureText(l).width)) / 100; // line width per px of font size
-    const thick = (px: number) => px * (1.2 * n + 1.1);
-    // The line nearest the corner has the shortest stretch of band, so the block's near edge sets the limit.
-    let size = farMax / ((k * sc) / 0.9 + 1.2 * n + 0.55);
-    size = Math.max(9, Math.min(cap, size));
-    // Re-measure and tighten: text width is not exactly linear in font size.
-    for (let i = 0; i < 8; i++) {
-      ctx.font = `800 ${size}px ${FONT}`;
-      const width = Math.max(...lines.map((l) => ctx.measureText(l).width));
-      const need = Math.max((width * sc) / 0.9 + 0.6 * n * size, thick(size) / 2 + 0.3 * size);
-      if (need + thick(size) / 2 <= farMax + 0.5 || size <= 9) { return { lines, size, width, need, thick: thick(size) }; }
-      size = Math.max(9, size - Math.max(0.5, (need + thick(size) / 2 - farMax) / (k + 1)));
-    }
+  const sin = Math.sin(phi), cos = Math.cos(phi);
+  const limit = MAX_BLEED * Math.min(w, h);
+  let size = Math.max(9, h * 0.065 * scale);
+  for (let i = 0; i < 40; i++) {
     ctx.font = `800 ${size}px ${FONT}`;
-    const width = Math.max(...lines.map((l) => ctx.measureText(l).width));
-    return { lines, size, width, need: Math.max((width * sc) / 0.9 + 0.6 * n * size, thick(size) / 2 + 0.3 * size), thick: thick(size) };
-  };
-  let pick = fit(options[0]);
-  if (options[1]) {
-    const two = fit(options[1]);
-    if (two.size > pick.size * 1.15) pick = two;
+    const width = ctx.measureText(text).width;
+    const band = size * 1.5;
+    const len = width + size * 1.2;
+    const D = 2.5 * size; // the band's middle line is this far from the corner
+    const mx = D / sin / 2, my = D / cos / 2;
+    // The band's four corners: the middle point, half the length along it, half the thickness across it.
+    const ux = cos, uy = -sin, nx = sin, ny = cos;
+    const xs: number[] = [], ys: number[] = [];
+    for (const a of [-1, 1]) for (const b of [-1, 1]) {
+      xs.push(mx + a * (len / 2) * ux + b * (band / 2) * nx);
+      ys.push(my + a * (len / 2) * uy + b * (band / 2) * ny);
+    }
+    const bleed: Bleed = {
+      l: Math.max(0, Math.ceil(-Math.min(...xs))),
+      t: Math.max(0, Math.ceil(-Math.min(...ys))),
+      r: Math.max(0, Math.ceil(Math.max(...xs) - w)),
+      b: Math.max(0, Math.ceil(Math.max(...ys) - h)),
+    };
+    if (Math.max(bleed.l, bleed.t, bleed.r, bleed.b) <= limit || size <= 9) {
+      return { size: Math.round(size * 10) / 10, line: text, band: Math.round(band), len: Math.round(len), mx, my, angle: -phi, bleed };
+    }
+    size = Math.max(9, size * 0.95);
   }
-  const D = Math.min(pick.need, farMax - pick.thick / 2); // centre line's distance from the corner
-  const reachTop = (D + pick.thick / 2) / sin;
-  const reachLeft = (D + pick.thick / 2) / cos;
-  return {
-    size: Math.round(pick.size * 10) / 10,
-    lines: pick.lines,
-    band: Math.round(pick.thick),
-    mx: D / sin / 2,
-    my: D / cos / 2,
-    angle: -phi,
-    reachTop,
-    reachLeft,
-  };
+  throw new Error("unreachable");
 }
 
 function drawCorner(ctx: any, w: number, h: number, s: Settings): void {
   const L = layoutCorner(ctx, w, h, s);
-  const diag = Math.hypot(w, h);
   ctx.save();
   ctx.translate(L.mx, L.my);
   ctx.rotate(L.angle);
@@ -222,23 +202,19 @@ function drawCorner(ctx: any, w: number, h: number, s: Settings): void {
   ctx.lineWidth = Math.max(2, Math.round(h * 0.008 * Math.min(1, Math.max(MIN_SCALE, s.scale ?? DEFAULT_SCALE))));
   for (const side of [-1, 1]) {
     ctx.beginPath();
-    ctx.moveTo(-diag, (side * L.band) / 2);
-    ctx.lineTo(diag, (side * L.band) / 2);
+    ctx.moveTo(-L.len / 2, (side * L.band) / 2);
+    ctx.lineTo(L.len / 2, (side * L.band) / 2);
     ctx.stroke();
   }
   ctx.font = `800 ${L.size}px ${FONT}`;
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
   ctx.lineJoin = "round";
-  const gap = L.size * 1.2;
-  L.lines.forEach((line, i) => {
-    const y = (i - (L.lines.length - 1) / 2) * gap;
-    ctx.strokeStyle = WATERMARK_HALO;
-    ctx.lineWidth = Math.max(3, L.size * 0.16);
-    ctx.strokeText(line, 0, y);
-    ctx.fillStyle = s.color;
-    ctx.fillText(line, 0, y);
-  });
+  ctx.strokeStyle = WATERMARK_HALO;
+  ctx.lineWidth = Math.max(3, L.size * 0.16);
+  ctx.strokeText(L.line, 0, 0);
+  ctx.fillStyle = s.color;
+  ctx.fillText(L.line, 0, 0);
   ctx.restore();
 }
 
@@ -284,12 +260,22 @@ export function renderCard(source: Surface | ImageBitmap, s: Settings, make: Mak
     h = MAX_CARD_PX_H;
     w = Math.max(1, Math.round((h * sw) / sh));
   }
-  const out = make(w, h);
+  let bleed: Bleed = { l: 0, t: 0, r: 0, b: 0 };
+  if (s.text.trim() && (s.position ?? DEFAULT_POSITION) === "corner") bleed = layoutCorner(make(1, 1).getContext("2d"), w, h, s).bleed;
+  const out = make(w + bleed.l + bleed.r, h + bleed.t + bleed.b);
   const ctx = out.getContext("2d");
   ctx.imageSmoothingQuality = "high";
+  ctx.translate(bleed.l, bleed.t);
   ctx.drawImage(source as any, 0, 0, w, h);
   drawWatermark(ctx, w, h, s);
+  (out as any).bleed = bleed;
   return out;
+}
+
+/** Where the card itself sits inside a rendered surface (the band may add room around it). */
+export function cardBox(c: { width: number; height: number; bleed?: Bleed }): { x: number; y: number; w: number; h: number } {
+  const b = c.bleed ?? { l: 0, t: 0, r: 0, b: 0 };
+  return { x: b.l, y: b.t, w: c.width - b.l - b.r, h: c.height - b.t - b.b };
 }
 
 export async function encode(surface: Surface, type: "png" | "jpeg" = "png"): Promise<Uint8Array> {
@@ -314,22 +300,30 @@ export interface RectMm { x: number; y: number; w: number; h: number }
  * Normal cards are 85.6 mm wide (true size). A card that would be too tall (portrait photos)
  * is scaled down to fit, never squashed.
  */
-export function planSheetMm(cards: { width: number; height: number }[]): RectMm[] {
-  const top = 20, gap = 12, bottom = 10;
+export function planSheetMm(cards: { width: number; height: number; bleed?: Bleed }[]): RectMm[] {
+  const top = 28, gap = 28, bottom = 10; // room above each card for a band that runs out past its corner
   const maxH = (A4_MM.h - top - bottom - gap * (cards.length - 1)) / cards.length;
   const rects: RectMm[] = [];
   let y = top;
-  for (const c of cards) {
+  for (const surface of cards) {
+    const c = cardBox(surface);
     let w = CARD_MM_W;
-    let h = (w * c.height) / c.width;
+    let h = (w * c.h) / c.w;
     if (h > maxH) {
       h = maxH;
-      w = (h * c.width) / c.height;
+      w = (h * c.w) / c.h;
     }
     rects.push({ x: (A4_MM.w - w) / 2, y, w, h });
     y += h + gap;
   }
   return rects;
+}
+
+/** The rectangle (mm) for the whole rendered surface, given the rectangle of the card inside it. */
+export function surfaceRectMm(c: { width: number; height: number; bleed?: Bleed }, card: RectMm): RectMm {
+  const box = cardBox(c);
+  const k = card.w / box.w;
+  return { x: card.x - box.x * k, y: card.y - box.y * k, w: c.width * k, h: c.height * k };
 }
 
 /** Lay front on top and back below on one A4 sheet. */
@@ -343,7 +337,7 @@ export function layoutSheet(front: Surface, back: Surface, dpi: number, make: Ma
   ctx.imageSmoothingQuality = "high";
   const rects = planSheetMm([front, back]);
   [front, back].forEach((c, i) => {
-    const r = rects[i];
+    const r = surfaceRectMm(c, rects[i]);
     ctx.drawImage(c as any, mmToPx(r.x, dpi), mmToPx(r.y, dpi), mmToPx(r.w, dpi), mmToPx(r.h, dpi));
   });
   return sheet;
@@ -370,7 +364,7 @@ export async function exportPdf(front: Surface, back: Surface): Promise<Uint8Arr
   const pt = (mm: number) => (mm / 25.4) * 72;
   const rects = planSheetMm([front, back]);
   for (const [i, c] of [front, back].entries()) {
-    const r = rects[i];
+    const r = surfaceRectMm(c, rects[i]);
     const img = await pdf.embedPng(await encode(c, "png"));
     page.drawImage(img, { x: pt(r.x), y: 841.89 - pt(r.y) - pt(r.h), width: pt(r.w), height: pt(r.h) });
   }

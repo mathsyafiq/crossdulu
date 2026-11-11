@@ -9,7 +9,7 @@ import {
 } from "../lib/watermark";
 
 const CONSENT_KEY = "palang-consent-v1";
-const CORNER_SCALE = 0.6; // starting size for the corner band: clear of most card details, still readable
+const CORNER_SCALE = 0.75; // starting size for the corner band: clear of most card details, still readable
 
 interface Props {
   lang: Lang;
@@ -34,6 +34,8 @@ function Canvas({ source, settings, label }: { source: Surface; settings: Settin
       el.width = shown.width;
       el.height = shown.height;
       el.getContext("2d")!.drawImage(shown as CanvasImageSource, 0, 0);
+      const b = (shown as any).bleed;
+      el.dataset.pad = b ? `${b.l},${b.t},${b.r},${b.b}` : "0,0,0,0"; // room around the card for a band that runs out past it
     });
     return () => cancelAnimationFrame(id);
   }, [source, settings]);
