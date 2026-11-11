@@ -219,12 +219,14 @@ test("corner band never sticks out of the card by more than the limit, at any an
   }
 });
 
-test("a longer text is the same size as a short one unless it would stick out too far", () => {
+test("text keeps the size from the slider unless it would stick out too far; a longer text is never bigger", () => {
   const ctx = createCanvas(10, 10).getContext("2d");
-  const a = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, text: "FOR PRIVATE USE ONLY", scale: 0.8 });
-  const b = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, text: "FOR PRIVATE USE ONLY 10/11/2026", scale: 0.8 });
-  assert.equal(a.size, b.size);
-  assert.ok(a.size >= 28, `size ${a.size}`);
+  const slider = 638 * 0.065 * 0.8;
+  const short = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, text: "BANK ABC", scale: 0.8 });
+  const long = layoutCorner(ctx, CARD_PX_W, 638, { ...cornerBase, text: "FOR PRIVATE USE ONLY 10/11/2026 BANK ABC", scale: 0.8 });
+  assert.ok(Math.abs(short.size - slider) < 0.2, `short text size ${short.size} vs slider ${slider.toFixed(1)}`);
+  assert.ok(long.size <= short.size);
+  assert.ok(long.size >= 14, `size ${long.size}`);
 });
 
 test("the sheet keeps the card at true size and room for the band that runs out, without touching the other card", () => {
