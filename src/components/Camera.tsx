@@ -2,17 +2,19 @@ import { useEffect, useRef, useState } from "preact/hooks";
 import type { EditorStrings } from "../i18n/strings";
 import { guideRect } from "../lib/capture";
 import { browserSurface, type Surface } from "../lib/watermark";
+import FileButton from "./FileButton";
 
 interface Props {
   t: EditorStrings;
   onCapture: (s: Surface) => void;
   onClose: () => void;
-  /** Camera not available: hand over to the phone's own camera app instead. */
-  onFallback: () => void;
+  /** Camera not available: a picture from the phone's camera app, or a file on a computer. */
+  onPicked: (f: File) => void;
+  accept: string;
 }
 
 /** Live camera with a card-shaped guide. The picture is taken in this browser and never sent anywhere. */
-export default function Camera({ t, onCapture, onClose, onFallback }: Props) {
+export default function Camera({ t, onCapture, onClose, onPicked, accept }: Props) {
   const video = useRef<HTMLVideoElement>(null);
   const box = useRef<HTMLDivElement>(null);
   const shoot = useRef<HTMLButtonElement>(null);
@@ -102,7 +104,7 @@ export default function Camera({ t, onCapture, onClose, onFallback }: Props) {
   const key = (e: KeyboardEvent) => {
     if (e.key === "Escape") { e.preventDefault(); onClose(); return; }
     if (e.key !== "Tab" || !box.current) return;
-    const items = Array.from(box.current.querySelectorAll<HTMLElement>("button:not([disabled])"));
+    const items = Array.from(box.current.querySelectorAll<HTMLElement>("button:not([disabled]), input"));
     const first = items[0], last = items[items.length - 1];
     if (e.shiftKey && document.activeElement === first) { e.preventDefault(); last.focus(); }
     else if (!e.shiftKey && document.activeElement === last) { e.preventDefault(); first.focus(); }
@@ -138,7 +140,8 @@ export default function Camera({ t, onCapture, onClose, onFallback }: Props) {
               {reason === "denied" ? t.cameraDenied : reason === "none" ? t.cameraNone : reason === "busy" ? t.cameraBusy : t.cameraOther}
             </p>
             <div class="row">
-              <button type="button" class="btn primary" onClick={onFallback}>{phone ? t.cameraFallback : t.cameraFallbackDesktop}</button>
+              <FileButton label={phone ? t.cameraFallback : t.cameraFallbackDesktop} accept={phone ? "image/*" : accept}
+                capture={phone ? "environment" : undefined} onFile={(f) => { stop(); onPicked(f); }} />
               {reason !== "none" && (
                 <button type="button" class="btn secondary" onClick={() => setAttempt((n) => n + 1)}>{t.cameraRetry}</button>
               )}

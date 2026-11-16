@@ -99,10 +99,10 @@ test.describe("F06 camera with a guide box", () => {
     const dialog = page.getByRole("dialog", { name: "Ambil gambar kad" });
     await expect(dialog.getByRole("alert")).toContainText("Kamera tidak dapat dibuka");
     await expect(dialog.getByRole("alert")).toContainText("Akses kamera disekat");
-    await dialog.getByRole("button", { name: "Pilih gambar sahaja" }).click();
-    await expect(dialog).toBeHidden();
+    await dialog.getByLabel("Pilih gambar sahaja", { exact: true }).click();
     await expect.poll(() => choosers.length).toBe(1);
     await (choosers[0] as import("@playwright/test").FileChooser).setFiles(img(1600, 1010, "PHONE"));
+    await expect(dialog).toBeHidden();
     await expect(page.locator("section[aria-labelledby=front-h] canvas")).toBeVisible();
   });
 

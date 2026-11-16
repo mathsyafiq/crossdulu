@@ -179,8 +179,8 @@ test.describe("F01 edge cases", () => {
       for (let i = 0; i < 30; i++) {
         await page.keyboard.press("Tab");
         const ok = await page.evaluate((s) => {
-          const a = document.activeElement as HTMLElement;
-          return a?.tagName === "BUTTON" && a.textContent === "Pilih gambar" && !!a.closest(`section[aria-labelledby=${s}-h]`);
+          const a = document.activeElement as HTMLInputElement;
+          return a?.type === "file" && a.getAttribute("aria-label") === "Pilih gambar" && !!a.closest(`section[aria-labelledby=${s}-h]`);
         }, side);
         if (ok) return;
       }

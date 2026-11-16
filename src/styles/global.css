@@ -112,3 +112,9 @@ input[type="range"] { width: 100%; min-height: var(--touch-target-min); accent-c
 .cam-guide { position: absolute; border: 3px solid var(--watermark-halo); border-radius: var(--radius-md); box-shadow: 0 0 0 100vmax rgba(0, 0, 0, .55); pointer-events: none; }
 .pdf-pick { position: relative; display: flex; gap: var(--space-3); align-items: center; flex-wrap: wrap; margin-bottom: var(--space-3); }
 .chip[aria-checked="true"] { background: var(--color-accent-soft); color: var(--color-accent); border-color: var(--color-accent); font-weight: 600; }
+
+/* File buttons: the real file input covers the whole button, invisibly, so a click or tap opens the picker directly. */
+.file-btn { overflow: hidden; }
+.file-hit { position: absolute; inset: 0; width: 100%; height: 100%; margin: 0; padding: 0; border: 0; opacity: 0; cursor: pointer; font-size: 100px; }
+.file-hit::file-selector-button { width: 100%; height: 100%; cursor: pointer; }
+.file-btn:focus-within { outline: 2px solid var(--color-accent); outline-offset: 2px; }

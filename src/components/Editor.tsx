@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from "preact/hooks";
 import type { EditorStrings, Lang } from "../i18n/strings";
 import Camera from "./Camera";
+import FileButton from "./FileButton";
 import { importPdf, isPdf, preloadPdfReader } from "../lib/pdfimport";
 import {
   type Surface, type Settings, type Warning,
@@ -12,12 +13,6 @@ const CONSENT_KEY = "palang-consent-v1";
 // Extensions as well as MIME types: Windows and some file managers report an empty or odd type for photos.
 const IMAGE_ACCEPT = "image/*,.jpg,.jpeg,.jfif,.png,.webp,.gif,.bmp,.heic,.heif,.avif,application/pdf,.pdf";
 
-/** Open a file picker from our own button. Clearing first lets the same file be chosen twice. */
-function openPicker(input: HTMLInputElement | null) {
-  if (!input) return;
-  input.value = "";
-  input.click();
-}
 const CORNER_SCALE = 0.75; // starting size for the corner band: clear of most card details, still readable
 
 interface Props {
@@ -60,18 +55,11 @@ function Slot(props: {
   error: string | null;
   onFile: (f: File) => void;
   onCamera: () => void;
-  captureRef: { current: HTMLInputElement | null };
   onRemove: () => void;
   previewLabel: string;
 }) {
   const { t, value } = props;
   const [drag, setDrag] = useState(false);
-  const fileRef = useRef<HTMLInputElement>(null);
-  const pick = (e: Event) => {
-    const f = (e.target as HTMLInputElement).files?.[0];
-    if (f) props.onFile(f);
-    (e.target as HTMLInputElement).value = "";
-  };
   return (
     <section
       class={`slot${drag ? " is-drag" : ""}`}
@@ -92,17 +80,9 @@ function Slot(props: {
         <p class="muted slot-empty">{t.drop}</p>
       )}
       <div class="row">
-        {/* A real button that opens the picker itself: works with mouse, touch and keyboard in every browser,
-            instead of relying on a label passing its click to a hidden input (unreliable on some desktops). */}
-        <button type="button" class={`btn ${value ? "secondary" : "primary"}`} onClick={() => openPicker(fileRef.current)}>
-          {value ? t.replace : t.choose}
-        </button>
-        <input ref={fileRef} class="visually-hidden" type="file" accept={IMAGE_ACCEPT}
-          tabIndex={-1} aria-hidden="true" onChange={pick} />
+        <FileButton label={value ? t.replace : t.choose} accept={IMAGE_ACCEPT}
+          variant={value ? "secondary" : "primary"} onFile={props.onFile} />
         {!value && <button type="button" class="btn secondary" onClick={props.onCamera}>{t.camera}</button>}
-        {/* Fallback when the live camera is unavailable: the phone's own camera app (a normal picker on a computer). */}
-        <input ref={props.captureRef} class="visually-hidden" type="file" accept="image/*" capture="environment"
-          tabIndex={-1} aria-hidden="true" onChange={pick} />
         {value && (
           <button type="button" class="btn ghost" onClick={props.onRemove}>{t.remove}</button>
         )}
@@ -161,9 +141,6 @@ export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
   const [colour, setColour] = useState<string>(WATERMARK_COLORS[0]);
   const [busy, setBusy] = useState<null | "png" | "pdf">(null);
   const [cameraFor, setCameraFor] = useState<null | "front" | "back">(null);
-  const captureFront = useRef<HTMLInputElement | null>(null);
-  const captureBack = useRef<HTMLInputElement | null>(null);
-  const pdfRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<{ kind: "ok" | "bad"; msg: string } | null>(null);
 
   useEffect(() => {
@@ -288,31 +265,23 @@ export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
     <div class="editor" lang={lang}>
       {cameraFor && consent && (
         <Camera t={t} onCapture={(sf) => captured(cameraFor, sf)} onClose={() => setCameraFor(null)}
-          onFallback={() => { const r = cameraFor === "front" ? captureFront : captureBack; setCameraFor(null); r.current?.click(); }} />
+          accept={IMAGE_ACCEPT} onPicked={(f) => { const side = cameraFor; setCameraFor(null); void handleFile(f, side); }} />
       )}
       {!consent && <ConsentModal t={t} homeHref={homeHref} privacyHref={privacyHref} onAccept={accept} />}
       <div class="editor-grid" aria-hidden={!consent} inert={!consent}>
         <div class="slots">
           <div class="pdf-pick">
-            <button type="button" class="btn secondary" onPointerEnter={preloadPdfReader} onFocus={preloadPdfReader}
-              onClick={() => { preloadPdfReader(); openPicker(pdfRef.current); }}>
-              {t.pdfChoose}
-            </button>
-            <input ref={pdfRef} class="visually-hidden" type="file" accept="application/pdf,.pdf" tabIndex={-1} aria-hidden="true"
-              onChange={(e) => {
-                const f = (e.target as HTMLInputElement).files?.[0];
-                if (f) handleFile(f, null);
-                (e.target as HTMLInputElement).value = "";
-              }} />
+            <FileButton label={t.pdfChoose} accept="application/pdf,.pdf" variant="secondary"
+              onIntent={preloadPdfReader} onFile={(f) => handleFile(f, null)} />
             <span class="muted small">{t.pdfHint}</span>
           </div>
           <Slot id="front" label={t.front} t={t} value={front} settings={both ? settings : null}
             error={errFront} onFile={(f) => handleFile(f, "front")}
-            onCamera={() => setCameraFor("front")} captureRef={captureFront}
+            onCamera={() => setCameraFor("front")}
             onRemove={() => setFront(null)} previewLabel={t.previewFront} />
           <Slot id="back" label={t.back} t={t} value={back} settings={both ? settings : null}
             error={errBack} onFile={(f) => handleFile(f, "back")}
-            onCamera={() => setCameraFor("back")} captureRef={captureBack}
+            onCamera={() => setCameraFor("back")}
             onRemove={() => setBack(null)} previewLabel={t.previewBack} />
           {both && <div class="row"><button type="button" class="btn ghost" onClick={swap}>{t.swap}</button></div>}
           <p class="muted small">{t.staysHere}</p>
