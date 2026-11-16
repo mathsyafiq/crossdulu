@@ -88,7 +88,7 @@ test.describe("F06 camera with a guide box", () => {
     expect(await page.evaluate(() => !!document.activeElement?.closest("[role=dialog]"))).toBe(true);
   });
 
-  test("F06-N1 camera blocked: clear message, and the phone's camera app is offered instead", async ({ page }) => {
+  test("F06-N1 camera blocked: clear message, and a picture picker is offered instead", async ({ page }) => {
     await page.addInitScript(() => {
       navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException("denied", "NotAllowedError"));
     });
@@ -98,7 +98,8 @@ test.describe("F06 camera with a guide box", () => {
     await cameraBtn(page, "front").click();
     const dialog = page.getByRole("dialog", { name: "Ambil gambar kad" });
     await expect(dialog.getByRole("alert")).toContainText("Kamera tidak dapat dibuka");
-    await dialog.getByRole("button", { name: "Guna aplikasi kamera telefon" }).click();
+    await expect(dialog.getByRole("alert")).toContainText("Akses kamera disekat");
+    await dialog.getByRole("button", { name: "Pilih gambar sahaja" }).click();
     await expect(dialog).toBeHidden();
     await expect.poll(() => choosers.length).toBe(1);
     await (choosers[0] as import("@playwright/test").FileChooser).setFiles(img(1600, 1010, "PHONE"));

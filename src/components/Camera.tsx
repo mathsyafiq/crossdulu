@@ -18,7 +18,11 @@ export default function Camera({ t, onCapture, onClose, onFallback }: Props) {
   const shoot = useRef<HTMLButtonElement>(null);
   const stream = useRef<MediaStream | null>(null);
   const [state, setState] = useState<"starting" | "live" | "error">("starting");
+  const [reason, setReason] = useState<"denied" | "none" | "busy" | "other">("other");
+  const [attempt, setAttempt] = useState(0);
   const [size, setSize] = useState<{ w: number; h: number } | null>(null);
+  // A phone hands over to its camera app; a computer just opens the normal picture picker.
+  const phone = typeof matchMedia === "function" && matchMedia("(pointer: coarse)").matches;
 
   const stop = () => {
     stream.current?.getTracks().forEach((tr) => tr.stop());
@@ -27,30 +31,59 @@ export default function Camera({ t, onCapture, onClose, onFallback }: Props) {
 
   useEffect(() => {
     let dead = false;
+    setState("starting");
+    setSize(null);
+    const fail = (e: unknown) => {
+      if (dead) return;
+      stop();
+      const n = (e as { name?: string })?.name;
+      setReason(n === "NotAllowedError" || n === "SecurityError" ? "denied"
+        : n === "NotFoundError" || n === "OverconstrainedError" ? "none"
+        : n === "NotReadableError" || n === "AbortError" ? "busy" : "other");
+      setState("error");
+    };
+    const open = (video: MediaTrackConstraints) => navigator.mediaDevices.getUserMedia({ video, audio: false });
     (async () => {
       try {
         if (!navigator.mediaDevices?.getUserMedia) throw new Error("unsupported");
-        const s = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } },
-          audio: false,
-        });
+        let s: MediaStream;
+        try {
+          s = await open({ facingMode: { ideal: "environment" }, width: { ideal: 1920 }, height: { ideal: 1080 } });
+        } catch (e) {
+          // Some laptop webcams and older browsers refuse the size hints: ask for any camera at all.
+          if ((e as { name?: string })?.name === "NotAllowedError") throw e;
+          s = await open({});
+        }
         if (dead) { s.getTracks().forEach((tr) => tr.stop()); return; }
         stream.current = s;
         const v = video.current!;
+        // Safari and Firefox are strict about silent inline playback: set these as attributes too.
+        v.muted = true;
+        v.setAttribute("muted", "");
+        v.setAttribute("playsinline", "");
+        v.setAttribute("autoplay", "");
         v.srcObject = s;
-        await v.play();
-        const ready = () => {
-          if (!v.videoWidth) return;
-          setSize({ w: v.videoWidth, h: v.videoHeight });
-          setState("live");
-        };
-        if (v.videoWidth) ready(); else v.addEventListener("loadedmetadata", ready, { once: true });
-      } catch {
-        if (!dead) setState("error");
+        await v.play().catch(() => { /* autoplay attribute takes over */ });
+        // Wait until the picture has a size. Polling also covers browsers that fired loadedmetadata early.
+        const t0 = performance.now();
+        await new Promise<void>((res, rej) => {
+          const tick = () => {
+            if (dead) return res();
+            if (v.videoWidth) return res();
+            if (performance.now() - t0 > 12000) return rej(new Error("timeout"));
+            requestAnimationFrame(tick);
+          };
+          tick();
+        });
+        if (dead) return;
+        setSize({ w: v.videoWidth, h: v.videoHeight });
+        setState("live");
+      } catch (e) {
+        fail(e);
       }
     })();
     return () => { dead = true; stop(); };
-  }, []);
+  }, [attempt]);
 
   useEffect(() => { if (state === "live") shoot.current?.focus(); }, [state]);
 
@@ -100,9 +133,15 @@ export default function Camera({ t, onCapture, onClose, onFallback }: Props) {
         )}
         {state === "error" && (
           <>
-            <p id="cam-hint" class="notice bad" role="alert">{t.cameraError}</p>
+            <p id="cam-hint" class="notice bad" role="alert">
+              {t.cameraError}{" "}
+              {reason === "denied" ? t.cameraDenied : reason === "none" ? t.cameraNone : reason === "busy" ? t.cameraBusy : t.cameraOther}
+            </p>
             <div class="row">
-              <button type="button" class="btn primary" onClick={onFallback}>{t.cameraFallback}</button>
+              <button type="button" class="btn primary" onClick={onFallback}>{phone ? t.cameraFallback : t.cameraFallbackDesktop}</button>
+              {reason !== "none" && (
+                <button type="button" class="btn secondary" onClick={() => setAttempt((n) => n + 1)}>{t.cameraRetry}</button>
+              )}
               <button type="button" class="btn secondary" onClick={onClose}>{t.cameraCancel}</button>
             </div>
           </>

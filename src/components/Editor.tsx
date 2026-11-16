@@ -9,6 +9,15 @@ import {
 } from "../lib/watermark";
 
 const CONSENT_KEY = "palang-consent-v1";
+// Extensions as well as MIME types: Windows and some file managers report an empty or odd type for photos.
+const IMAGE_ACCEPT = "image/*,.jpg,.jpeg,.jfif,.png,.webp,.gif,.bmp,.heic,.heif,.avif,application/pdf,.pdf";
+
+/** Open a file picker from our own button. Clearing first lets the same file be chosen twice. */
+function openPicker(input: HTMLInputElement | null) {
+  if (!input) return;
+  input.value = "";
+  input.click();
+}
 const CORNER_SCALE = 0.75; // starting size for the corner band: clear of most card details, still readable
 
 interface Props {
@@ -57,14 +66,11 @@ function Slot(props: {
 }) {
   const { t, value } = props;
   const [drag, setDrag] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
   const pick = (e: Event) => {
     const f = (e.target as HTMLInputElement).files?.[0];
     if (f) props.onFile(f);
     (e.target as HTMLInputElement).value = "";
-  };
-  // Browsers differ on whether Enter opens a file input (Space always does): make both work.
-  const enterOpens = (e: KeyboardEvent) => {
-    if (e.key === "Enter") { e.preventDefault(); const i = e.currentTarget as HTMLInputElement; try { i.showPicker(); } catch { i.click(); } }
   };
   return (
     <section
@@ -86,12 +92,15 @@ function Slot(props: {
         <p class="muted slot-empty">{t.drop}</p>
       )}
       <div class="row">
-        <label class={`btn ${value ? "secondary" : "primary"}`}>
+        {/* A real button that opens the picker itself: works with mouse, touch and keyboard in every browser,
+            instead of relying on a label passing its click to a hidden input (unreliable on some desktops). */}
+        <button type="button" class={`btn ${value ? "secondary" : "primary"}`} onClick={() => openPicker(fileRef.current)}>
           {value ? t.replace : t.choose}
-          <input class="visually-hidden" type="file" accept="image/*,application/pdf,.pdf" onChange={pick} onKeyDown={enterOpens} />
-        </label>
+        </button>
+        <input ref={fileRef} class="visually-hidden" type="file" accept={IMAGE_ACCEPT}
+          tabIndex={-1} aria-hidden="true" onChange={pick} />
         {!value && <button type="button" class="btn secondary" onClick={props.onCamera}>{t.camera}</button>}
-        {/* Fallback when the live camera is unavailable: the phone's own camera app. */}
+        {/* Fallback when the live camera is unavailable: the phone's own camera app (a normal picker on a computer). */}
         <input ref={props.captureRef} class="visually-hidden" type="file" accept="image/*" capture="environment"
           tabIndex={-1} aria-hidden="true" onChange={pick} />
         {value && (
@@ -154,6 +163,7 @@ export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
   const [cameraFor, setCameraFor] = useState<null | "front" | "back">(null);
   const captureFront = useRef<HTMLInputElement | null>(null);
   const captureBack = useRef<HTMLInputElement | null>(null);
+  const pdfRef = useRef<HTMLInputElement>(null);
   const [status, setStatus] = useState<{ kind: "ok" | "bad"; msg: string } | null>(null);
 
   useEffect(() => {
@@ -205,6 +215,31 @@ export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
       setters[target].err(failMsg(e));
     }
   };
+
+  // On a computer, a picture or PDF can also be pasted (Ctrl+V / Cmd+V), e.g. from a screenshot.
+  const latestHandle = useRef(handleFile);
+  latestHandle.current = handleFile;
+  useEffect(() => {
+    if (!consent) return;
+    const onPaste = (e: ClipboardEvent) => {
+      const el = e.target as HTMLElement | null;
+      if (el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA" || el.isContentEditable)) return;
+      const f = Array.from(e.clipboardData?.files ?? []).find((x) => isPdf(x) || x.type.startsWith("image/"));
+      if (!f) return;
+      e.preventDefault();
+      void latestHandle.current(f, null);
+    };
+    // A file dropped next to a slot instead of on it would make a desktop browser open it and leave this page.
+    const stray = (e: DragEvent) => { if (e.dataTransfer?.types?.includes("Files")) e.preventDefault(); };
+    document.addEventListener("paste", onPaste);
+    document.addEventListener("dragover", stray);
+    document.addEventListener("drop", stray);
+    return () => {
+      document.removeEventListener("paste", onPaste);
+      document.removeEventListener("dragover", stray);
+      document.removeEventListener("drop", stray);
+    };
+  }, [consent]);
 
   const captured = (side: "front" | "back", s: Surface) => {
     setters[side].set(s);
@@ -259,14 +294,16 @@ export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
       <div class="editor-grid" aria-hidden={!consent} inert={!consent}>
         <div class="slots">
           <div class="pdf-pick">
-            <label class="btn secondary" onPointerEnter={preloadPdfReader} onTouchStart={preloadPdfReader}>
+            <button type="button" class="btn secondary" onPointerEnter={preloadPdfReader} onFocus={preloadPdfReader}
+              onClick={() => { preloadPdfReader(); openPicker(pdfRef.current); }}>
               {t.pdfChoose}
-              <input class="visually-hidden" type="file" accept="application/pdf,.pdf" onFocus={preloadPdfReader} onChange={(e) => {
+            </button>
+            <input ref={pdfRef} class="visually-hidden" type="file" accept="application/pdf,.pdf" tabIndex={-1} aria-hidden="true"
+              onChange={(e) => {
                 const f = (e.target as HTMLInputElement).files?.[0];
                 if (f) handleFile(f, null);
                 (e.target as HTMLInputElement).value = "";
-              }} onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); (e.currentTarget as HTMLInputElement).click(); } }} />
-            </label>
+              }} />
             <span class="muted small">{t.pdfHint}</span>
           </div>
           <Slot id="front" label={t.front} t={t} value={front} settings={both ? settings : null}

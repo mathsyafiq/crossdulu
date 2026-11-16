@@ -69,7 +69,13 @@ export interface EditorStrings {
   cameraCapture: string;
   cameraCancel: string;
   cameraError: string;
+  cameraDenied: string;
+  cameraNone: string;
+  cameraBusy: string;
+  cameraOther: string;
+  cameraRetry: string;
   cameraFallback: string;
+  cameraFallbackDesktop: string;
   pdfChoose: string;
   pdfHint: string;
   pdfWorking: string;
@@ -197,8 +203,14 @@ export const dict: Record<Lang, Dict> = {
         cameraHint: "Letakkan kad dalam kotak putih. Pastikan kad rata, terang dan semua tepi nampak, kemudian tekan Ambil gambar.",
         cameraCapture: "Ambil gambar",
         cameraCancel: "Batal",
-        cameraError: "Kamera tidak dapat dibuka. Benarkan akses kamera untuk laman ini dalam tetapan browser, atau guna aplikasi kamera telefon anda.",
+        cameraError: "Kamera tidak dapat dibuka.",
+        cameraDenied: "Akses kamera disekat untuk laman ini. Klik ikon kamera atau mangga di bar alamat dan pilih Benarkan, kemudian tekan Cuba lagi. Di komputer, pastikan juga browser dibenarkan guna kamera dalam tetapan privasi sistem (Mac: Tetapan Sistem > Privasi & Keselamatan > Kamera; Windows: Tetapan > Privasi > Kamera).",
+        cameraNone: "Tiada kamera ditemui pada peranti ini. Pilih gambar kad yang sudah ada.",
+        cameraBusy: "Kamera sedang digunakan oleh aplikasi lain (contohnya Zoom, Teams atau Meet). Tutup aplikasi itu, kemudian tekan Cuba lagi.",
+        cameraOther: "Cuba lagi, atau pilih gambar kad yang sudah ada.",
+        cameraRetry: "Cuba lagi",
         cameraFallback: "Guna aplikasi kamera telefon",
+        cameraFallbackDesktop: "Pilih gambar sahaja",
         pdfChoose: "Muat naik PDF salinan IC",
         pdfHint: "Sudah ada salinan IC dalam PDF? Pilih fail itu dan kami asingkan depan dan belakang.",
         pdfWorking: "Membaca PDF...",
@@ -325,8 +337,14 @@ export const dict: Record<Lang, Dict> = {
         cameraHint: "Put the card inside the white box. Keep it flat and well lit with all four edges visible, then press Take picture.",
         cameraCapture: "Take picture",
         cameraCancel: "Cancel",
-        cameraError: "The camera could not be opened. Allow camera access for this site in your browser settings, or use your phone's camera app.",
+        cameraError: "The camera could not be opened.",
+        cameraDenied: "Camera access is blocked for this site. Click the camera or padlock icon in the address bar, choose Allow, then press Try again. On a computer, also check that the browser may use the camera in the system privacy settings (Mac: System Settings > Privacy & Security > Camera; Windows: Settings > Privacy > Camera).",
+        cameraNone: "No camera was found on this device. Choose a picture of the card instead.",
+        cameraBusy: "The camera is being used by another app (for example Zoom, Teams or Meet). Close that app, then press Try again.",
+        cameraOther: "Try again, or choose a picture of the card instead.",
+        cameraRetry: "Try again",
         cameraFallback: "Use the phone's camera app",
+        cameraFallbackDesktop: "Choose a picture instead",
         pdfChoose: "Upload a PDF of your ID copy",
         pdfHint: "Already have your ID copy as a PDF? Choose it and we separate the front and back.",
         pdfWorking: "Reading the PDF...",

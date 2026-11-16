@@ -179,12 +179,12 @@ test.describe("F01 edge cases", () => {
       for (let i = 0; i < 30; i++) {
         await page.keyboard.press("Tab");
         const ok = await page.evaluate((s) => {
-          const a = document.activeElement as HTMLInputElement;
-          return a?.type === "file" && !!a.closest(`section[aria-labelledby=${s}-h]`) && !a.hasAttribute("capture");
+          const a = document.activeElement as HTMLElement;
+          return a?.tagName === "BUTTON" && a.textContent === "Pilih gambar" && !!a.closest(`section[aria-labelledby=${s}-h]`);
         }, side);
         if (ok) return;
       }
-      throw new Error(`could not reach the ${side} file input by keyboard`);
+      throw new Error(`could not reach the ${side} choose-picture button by keyboard`);
     };
     await focusFileInput("front");
     await page.keyboard.press("Enter");

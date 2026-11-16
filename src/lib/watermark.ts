@@ -56,26 +56,41 @@ export class LoadFailure extends Error {
 
 /** Decode a user file to a canvas, EXIF-rotated and downscaled. Never uploads anything. */
 export async function loadImage(file: File, make: MakeSurface = browserSurface): Promise<Surface> {
-  if (!file.type.startsWith("image/")) throw new LoadFailure("type");
+  // Some systems (often Windows, and drag-and-drop from some apps) give a photo an empty or generic type.
+  const typed = file.type.startsWith("image/");
+  const unknown = !file.type || file.type === "application/octet-stream";
+  if (!typed && !(unknown && IMAGE_NAME.test(file.name))) throw new LoadFailure("type");
   if (file.size > MAX_FILE_BYTES) throw new LoadFailure("size");
-  let bmp: ImageBitmap;
-  try {
-    bmp = await createImageBitmap(file, { imageOrientation: "from-image" });
-  } catch {
+  let pic: { width: number; height: number; done: () => void; src: CanvasImageSource } | null = null;
+  for (const opts of [{ imageOrientation: "from-image" } as ImageBitmapOptions, undefined]) {
+    if (pic || typeof createImageBitmap !== "function") break;
     try {
-      bmp = await createImageBitmap(file);
-    } catch {
-      throw new LoadFailure("decode");
-    }
+      const bmp = await createImageBitmap(file, opts as ImageBitmapOptions);
+      pic = { width: bmp.width, height: bmp.height, src: bmp, done: () => bmp.close() };
+    } catch { /* try the next way */ }
   }
-  const scale = Math.min(1, MAX_SOURCE_EDGE / Math.max(bmp.width, bmp.height));
-  const w = Math.max(1, Math.round(bmp.width * scale));
-  const h = Math.max(1, Math.round(bmp.height * scale));
+  // Last resort: the browser's own <img> decoder (Safari reads HEIC this way; some browsers lack createImageBitmap).
+  if (!pic && typeof Image !== "undefined" && typeof URL?.createObjectURL === "function") {
+    const url = URL.createObjectURL(file);
+    try {
+      const img = new Image();
+      img.src = url;
+      await img.decode();
+      if (img.naturalWidth) pic = { width: img.naturalWidth, height: img.naturalHeight, src: img, done: () => URL.revokeObjectURL(url) };
+      else URL.revokeObjectURL(url);
+    } catch { URL.revokeObjectURL(url); }
+  }
+  if (!pic) throw new LoadFailure("decode");
+  const scale = Math.min(1, MAX_SOURCE_EDGE / Math.max(pic.width, pic.height));
+  const w = Math.max(1, Math.round(pic.width * scale));
+  const h = Math.max(1, Math.round(pic.height * scale));
   const out = make(w, h);
-  out.getContext("2d").drawImage(bmp, 0, 0, w, h);
-  bmp.close();
+  out.getContext("2d").drawImage(pic.src, 0, 0, w, h);
+  pic.done();
   return out;
 }
+
+const IMAGE_NAME = /\.(jpe?g|jfif|png|webp|gif|bmp|heic|heif|avif|tiff?)$/i;
 
 export type Warning = "empty" | "faint" | "heavy" | "small";
 export function checkSettings(s: Settings): Warning[] {
