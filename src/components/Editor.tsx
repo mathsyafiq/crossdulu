@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "preact/hooks";
-import type { EditorStrings, Lang } from "../i18n/strings";
+import type { EditorStrings } from "../i18n/strings";
 import Camera from "./Camera";
 import FileButton from "./FileButton";
 import { importPdf, isPdf, preloadPdfReader } from "../lib/pdfimport";
@@ -16,7 +16,7 @@ const IMAGE_ACCEPT = "image/*,.jpg,.jpeg,.jfif,.png,.webp,.gif,.bmp,.heic,.heif,
 const CORNER_SCALE = 0.75; // starting size for the corner band: clear of most card details, still readable
 
 interface Props {
-  lang: Lang;
+
   homeHref: string;
   privacyHref: string;
   t: EditorStrings;
@@ -124,7 +124,7 @@ function ConsentModal({ t, homeHref, privacyHref, onAccept }: { t: EditorStrings
   );
 }
 
-export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
+export default function Editor({ homeHref, privacyHref, t }: Props) {
   const [consent, setConsent] = useState<boolean | null>(null);
   const [front, setFront] = useState<Surface | null>(null);
   const [back, setBack] = useState<Surface | null>(null);
@@ -262,7 +262,7 @@ export default function Editor({ lang, homeHref, privacyHref, t }: Props) {
   if (consent === null) return null;
 
   return (
-    <div class="editor" lang={lang}>
+    <div class="editor">
       {cameraFor && consent && (
         <Camera t={t} onCapture={(sf) => captured(cameraFor, sf)} onClose={() => setCameraFor(null)}
           accept={IMAGE_ACCEPT} onPicked={(f) => { const side = cameraFor; setCameraFor(null); void handleFile(f, side); }} />

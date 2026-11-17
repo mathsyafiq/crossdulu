@@ -1,6 +1,11 @@
 /* Generated from tokens.json. Change values there, then regenerate. */
 :root {
   --color-bg: #ffffff;
+  --color-page: #f6f8f7;
+  --color-ink-deep: #0e3b37;
+  --color-on-deep: #e8f1ef;
+  --color-on-deep-muted: #b4cdc8;
+  --color-stamp: #d92d20;
   --color-surface: #f5f7f6;
   --color-border: #dde3e0;
   --color-border-input: #737f7a;
@@ -19,7 +24,8 @@
   --watermark-default: #d92d20;
   --watermark-halo: #ffffff;
 
-  --font-sans: Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --font-serif: "Newsreader Variable", "Iowan Old Style", Georgia, serif;
+  --font-sans: system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --font-mono: ui-monospace, SFMono-Regular, Menlo, monospace;
 
   --text-xs: 12px;   --leading-xs: 16px;

@@ -42,17 +42,17 @@ export const test = base.extend<{ guard: void }>({
 });
 export { expect };
 
-export async function acceptConsent(page: Page, lang: "ms" | "en" = "ms") {
+export async function acceptConsent(page: Page) {
   // The island renders client-side. Wait for it, then accept only if the dialog is really there.
   await expect(page.locator("#front-h")).toBeAttached();
-  const accept = page.getByRole("button", { name: lang === "ms" ? "Saya faham, teruskan" : "I understand, continue" });
+  const accept = page.getByRole("button", { name: "I understand, continue" });
   if (await accept.isVisible()) await accept.click();
   await expect(page.getByRole("dialog")).toBeHidden();
 }
 
-export async function openEditor(page: Page, lang: "ms" | "en" = "ms") {
-  await page.goto(`/${lang}/editor/`);
-  await acceptConsent(page, lang);
+export async function openEditor(page: Page) {
+  await page.goto("/editor/");
+  await acceptConsent(page);
   await expect(page.locator("#front-h")).toBeVisible();
 }
 

@@ -38,17 +38,17 @@ test.describe("D01 computer: mouse clicks open the pickers", () => {
     await openEditor(page);
     for (const side of ["front", "back"] as const) {
       // locator.click() is a real mouse click at the button's centre, made once the layout has settled.
-      const c = await chooserFrom(page, () => slot(page, side).getByLabel("Pilih gambar", { exact: true }).click());
+      const c = await chooserFrom(page, () => slot(page, side).getByLabel("Choose image", { exact: true }).click());
       await c.setFiles(img(1600, 1010, side.toUpperCase()));
       await expect(canvasIn(page, side)).toBeVisible();
     }
-    const r = await chooserFrom(page, () => slot(page, "front").getByLabel("Tukar", { exact: true }).click());
+    const r = await chooserFrom(page, () => slot(page, "front").getByLabel("Replace", { exact: true }).click());
     await r.setFiles(img(1600, 1010, "AGAIN"));
     await expect(canvasIn(page, "front")).toBeVisible();
 
-    await page.goto("/ms/editor/");
+    await page.goto("/editor/");
     await acceptConsent(page);
-    const p = await chooserFrom(page, () => page.getByLabel("Muat naik PDF salinan IC", { exact: true }).click());
+    const p = await chooserFrom(page, () => page.getByLabel("Upload a PDF of your ID copy", { exact: true }).click());
     await p.setFiles(await twoCardPdf());
     await expect(canvasIn(page, "front")).toBeVisible({ timeout: 30_000 });
     await expect(canvasIn(page, "back")).toBeVisible();
@@ -69,7 +69,7 @@ test.describe("D01 computer: mouse clicks open the pickers", () => {
 
   test("Space on the focused button opens the picker", async ({ page }) => {
     await openEditor(page);
-    await slot(page, "front").getByLabel("Pilih gambar", { exact: true }).focus();
+    await slot(page, "front").getByLabel("Choose image", { exact: true }).focus();
     const c = await chooserFrom(page, () => page.keyboard.press("Space"));
     await c.setFiles(img(1600, 1010, "SPACE"));
     await expect(canvasIn(page, "front")).toBeVisible();
@@ -77,7 +77,7 @@ test.describe("D01 computer: mouse clicks open the pickers", () => {
 
   test("a photo whose type the system did not report (common on Windows) still loads", async ({ page }) => {
     await openEditor(page);
-    const c = await chooserFrom(page, () => slot(page, "front").getByLabel("Pilih gambar", { exact: true }).click());
+    const c = await chooserFrom(page, () => slot(page, "front").getByLabel("Choose image", { exact: true }).click());
     const f = img(1600, 1010, "NOTYPE", "jpeg");
     await c.setFiles({ name: "IMG_0001.JPG", mimeType: "", buffer: f.buffer });
     await expect(canvasIn(page, "front")).toBeVisible();
@@ -116,11 +116,11 @@ test.describe("D02 computer: camera problems are explained and recoverable", () 
       navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException("none", "NotFoundError"));
     });
     await openEditor(page);
-    await slot(page, "front").getByRole("button", { name: "Guna kamera" }).click();
-    const dialog = page.getByRole("dialog", { name: "Ambil gambar kad" });
-    await expect(dialog.getByRole("alert")).toContainText("Tiada kamera ditemui");
-    await expect(dialog.getByRole("button", { name: "Cuba lagi" })).toHaveCount(0);
-    const c = await chooserFrom(page, () => dialog.getByLabel("Pilih gambar sahaja", { exact: true }).click());
+    await slot(page, "front").getByRole("button", { name: "Use camera" }).click();
+    const dialog = page.getByRole("dialog", { name: "Take a picture of the card" });
+    await expect(dialog.getByRole("alert")).toContainText("No camera was found");
+    await expect(dialog.getByRole("button", { name: "Try again" })).toHaveCount(0);
+    const c = await chooserFrom(page, () => dialog.getByLabel("Choose a picture instead", { exact: true }).click());
     await c.setFiles(img(1600, 1010, "PICKED"));
     await expect(canvasIn(page, "front")).toBeVisible();
   });
@@ -131,7 +131,7 @@ test.describe("D02 computer: camera problems are explained and recoverable", () 
       let n = 0;
       navigator.mediaDevices.getUserMedia = (c) => (++n <= 2 ? Promise.reject(new DOMException("busy", "NotReadableError")) : real(c));
     });
-    await openEditor(page, "en");
+    await openEditor(page);
     await slot(page, "front").getByRole("button", { name: "Use camera" }).click();
     const dialog = page.getByRole("dialog", { name: "Take a picture of the card" });
     await expect(dialog.getByRole("alert")).toContainText("being used by another app");
@@ -148,7 +148,7 @@ test.describe("D02 computer: camera problems are explained and recoverable", () 
         c?.video?.width ? Promise.reject(new DOMException("constraints", "OverconstrainedError")) : real(c);
     });
     await openEditor(page);
-    await slot(page, "front").getByRole("button", { name: "Guna kamera" }).click();
+    await slot(page, "front").getByRole("button", { name: "Use camera" }).click();
     await expect(page.getByTestId("camera-guide")).toBeVisible();
   });
 });
@@ -156,13 +156,13 @@ test.describe("D02 computer: camera problems are explained and recoverable", () 
 test.describe("D03 short laptop window", () => {
   test.use({ viewport: { width: 1280, height: 420 } });
   test("the consent and camera dialogs scroll so their buttons can be reached", async ({ page }) => {
-    await page.goto("/ms/editor/");
+    await page.goto("/editor/");
     await expect(page.locator("#front-h")).toBeAttached();
-    await page.getByRole("button", { name: "Saya faham, teruskan" }).click();
+    await page.getByRole("button", { name: "I understand, continue" }).click();
     await expect(page.getByRole("dialog")).toBeHidden();
-    await slot(page, "front").getByRole("button", { name: "Guna kamera" }).click();
-    const dialog = page.getByRole("dialog", { name: "Ambil gambar kad" });
-    await dialog.getByRole("button", { name: "Ambil gambar" }).click();
+    await slot(page, "front").getByRole("button", { name: "Use camera" }).click();
+    const dialog = page.getByRole("dialog", { name: "Take a picture of the card" });
+    await dialog.getByRole("button", { name: "Take picture" }).click();
     await expect(canvasIn(page, "front")).toBeVisible();
   });
 });
@@ -174,17 +174,17 @@ test.describe("D04 phone: taps open the pickers, and the phone camera app is the
       navigator.mediaDevices.getUserMedia = () => Promise.reject(new DOMException("denied", "NotAllowedError"));
     });
     await openEditor(page);
-    const c = await chooserFrom(page, () => slot(page, "front").getByLabel("Pilih gambar", { exact: true }).tap());
+    const c = await chooserFrom(page, () => slot(page, "front").getByLabel("Choose image", { exact: true }).tap());
     await c.setFiles(img(1600, 1010, "TAP"));
     await expect(canvasIn(page, "front")).toBeVisible();
-    const p = await chooserFrom(page, () => page.getByLabel("Muat naik PDF salinan IC", { exact: true }).tap());
+    const p = await chooserFrom(page, () => page.getByLabel("Upload a PDF of your ID copy", { exact: true }).tap());
     await p.setFiles(await twoCardPdf());
     await expect(canvasIn(page, "back")).toBeVisible({ timeout: 30_000 });
-    await page.getByRole("button", { name: "Buang" }).first().tap();
-    await slot(page, "front").getByRole("button", { name: "Guna kamera" }).tap();
-    const dialog = page.getByRole("dialog", { name: "Ambil gambar kad" });
-    await expect(dialog.getByRole("alert")).toContainText("Akses kamera disekat");
-    const f = await chooserFrom(page, () => dialog.getByLabel("Guna aplikasi kamera telefon", { exact: true }).tap());
+    await page.getByRole("button", { name: "Remove" }).first().tap();
+    await slot(page, "front").getByRole("button", { name: "Use camera" }).tap();
+    const dialog = page.getByRole("dialog", { name: "Take a picture of the card" });
+    await expect(dialog.getByRole("alert")).toContainText("Camera access is blocked");
+    const f = await chooserFrom(page, () => dialog.getByLabel("Use the phone's camera app", { exact: true }).tap());
     await f.setFiles(img(1600, 1010, "CAMAPP"));
     await expect(canvasIn(page, "front")).toBeVisible();
   });

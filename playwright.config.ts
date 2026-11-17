@@ -15,7 +15,7 @@ export default defineConfig({
   },
   webServer: {
     command: "node e2e/serve.mjs",
-    url: "http://localhost:4321/ms/",
+    url: "http://localhost:4321/",
     reuseExistingServer: true,
   },
 });

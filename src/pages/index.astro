@@ -1,0 +1,141 @@
+---
+import Base from "../layouts/Base.astro";
+import { dict, path } from "../i18n/strings";
+const d = dict.home;
+const editor = path("editor");
+---
+<Base page="home" title={d.title} description={d.description} bleed>
+  <section class="wrap hero-split">
+    <div class="hero-copy">
+      <h1 class="display">{d.h1}</h1>
+      <p class="lead">{d.lead}</p>
+      <div class="hero-actions">
+        <a class="btn primary lg" href={editor}>{d.cta}</a>
+        <p class="hero-note">{d.ctaNote}</p>
+      </div>
+    </div>
+
+    <figure class="hero-art">
+      <svg viewBox="0 0 560 420" role="img" aria-label={d.sampleAlt}>
+        <defs>
+          <linearGradient id="cardFace" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#eef4f2" />
+            <stop offset="1" stop-color="#d9e6e2" />
+          </linearGradient>
+          <linearGradient id="chip" x1="0" y1="0" x2="1" y2="1">
+            <stop offset="0" stop-color="#e6c983" />
+            <stop offset="1" stop-color="#b8924a" />
+          </linearGradient>
+          <filter id="lift" x="-20%" y="-20%" width="140%" height="150%">
+            <feDropShadow dx="0" dy="18" stdDeviation="18" flood-color="#0e3b37" flood-opacity=".16" />
+            <feDropShadow dx="0" dy="2" stdDeviation="2" flood-color="#0e3b37" flood-opacity=".12" />
+          </filter>
+          <clipPath id="frontClip"><rect x="0" y="0" width="400" height="252" rx="18" /></clipPath>
+        </defs>
+
+        <!-- back of card -->
+        <g transform="translate(150 150) rotate(7)" filter="url(#lift)">
+          <rect x="0" y="0" width="400" height="252" rx="18" fill="#e4ece9" />
+          <g fill="#b9c8c3">
+            <rect x="34" y="40" width="150" height="10" rx="5" />
+            <rect x="34" y="62" width="110" height="10" rx="5" />
+            <rect x="34" y="84" width="130" height="10" rx="5" />
+          </g>
+          <g fill="#8fa29c">
+            <rect x="34" y="176" width="3" height="44" /><rect x="41" y="176" width="6" height="44" /><rect x="51" y="176" width="2" height="44" />
+            <rect x="57" y="176" width="4" height="44" /><rect x="65" y="176" width="7" height="44" /><rect x="76" y="176" width="2" height="44" />
+            <rect x="82" y="176" width="5" height="44" /><rect x="91" y="176" width="3" height="44" /><rect x="98" y="176" width="6" height="44" />
+            <rect x="108" y="176" width="2" height="44" /><rect x="114" y="176" width="4" height="44" /><rect x="122" y="176" width="3" height="44" />
+          </g>
+          <circle cx="330" cy="190" r="34" fill="none" stroke="#b9c8c3" stroke-width="2" />
+          <circle cx="330" cy="190" r="22" fill="none" stroke="#b9c8c3" stroke-width="2" />
+          <circle cx="330" cy="190" r="10" fill="none" stroke="#b9c8c3" stroke-width="2" />
+        </g>
+
+        <!-- front of card -->
+        <g transform="translate(40 52) rotate(-5)">
+          <g filter="url(#lift)">
+            <rect x="0" y="0" width="400" height="252" rx="18" fill="url(#cardFace)" />
+          </g>
+          <g clip-path="url(#frontClip)" fill="none" stroke="#c6d8d2" stroke-width="1.2">
+            <path d="M-10 70 C 60 40, 120 100, 190 70 S 330 40, 410 70" />
+            <path d="M-10 86 C 60 56, 120 116, 190 86 S 330 56, 410 86" />
+            <path d="M-10 102 C 60 72, 120 132, 190 102 S 330 72, 410 102" />
+            <path d="M-10 196 C 70 170, 140 226, 210 196 S 340 170, 410 196" />
+            <path d="M-10 212 C 70 186, 140 242, 210 212 S 340 186, 410 212" />
+          </g>
+          <rect x="28" y="26" width="130" height="10" rx="5" fill="#9fb3ad" />
+          <rect x="28" y="62" width="58" height="44" rx="8" fill="url(#chip)" />
+          <path d="M28 84 H86 M57 62 V106 M42 62 V106 M72 62 V106" stroke="#a3803d" stroke-width="1.2" opacity=".55" />
+          <rect x="28" y="132" width="168" height="14" rx="4" fill="#5f736d" />
+          <rect x="28" y="168" width="150" height="9" rx="4.5" fill="#9fb3ad" />
+          <rect x="28" y="186" width="118" height="9" rx="4.5" fill="#9fb3ad" />
+          <rect x="28" y="204" width="140" height="9" rx="4.5" fill="#9fb3ad" />
+          <rect x="262" y="40" width="112" height="140" rx="10" fill="#c8d7d2" />
+          <circle cx="318" cy="96" r="25" fill="#a7bbb5" />
+          <path d="M276 180 C 280 142, 356 142, 360 180 Z" fill="#a7bbb5" />
+          <rect x="262" y="198" width="112" height="9" rx="4.5" fill="#b4c5c0" />
+        </g>
+
+        <!-- the watermark: red text across the top-left corner, running past the card edge, as the editor draws it -->
+        <g class="stamp" transform="translate(150 150) rotate(-45)">
+          <text x="0" y="0" text-anchor="middle" dominant-baseline="central"
+            font-family="system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif" font-weight="800" font-size="19" letter-spacing=".4"
+            fill="#d92d20" stroke="#ffffff" stroke-width="4" stroke-linejoin="round" paint-order="stroke">{d.sampleText}</text>
+        </g>
+      </svg>
+    </figure>
+  </section>
+
+  <section class="wrap steps-band" aria-labelledby="steps-h">
+    <h2 id="steps-h" class="section-title">{d.stepsTitle}</h2>
+    <ol class="step-row">
+      {d.steps.map((s) => (
+        <li>
+          <h3>{s.h}</h3>
+          <p>{s.p}</p>
+        </li>
+      ))}
+    </ol>
+  </section>
+
+  <section class="trust-band" aria-labelledby="trust-h">
+    <div class="wrap trust-grid">
+      <div class="trust-head">
+        <h2 id="trust-h" class="display-sm">{d.trustTitle}</h2>
+        <p>{d.trustLead}</p>
+        <p><a href={path("privacy")}>{d.privacyLink}</a></p>
+      </div>
+      <dl class="trust-list">
+        {d.trust.map((t) => (
+          <div>
+            <dt>{t.h}</dt>
+            <dd>{t.p}</dd>
+          </div>
+        ))}
+      </dl>
+    </div>
+  </section>
+
+  <div class="wrap why-faq">
+    <section class="why" aria-labelledby="why-h">
+      <h2 id="why-h" class="section-title">{d.whyTitle}</h2>
+      <p class="why-text">{d.why}</p>
+      <p><a href="https://www.mkn.gov.my/web/ms/2022/08/14/kad-pengenalan-tips-penjagaan-dan-palang-salinan/" rel="noopener">{d.mkn}</a></p>
+    </section>
+    <section class="faq" aria-labelledby="faq-h">
+      <h2 id="faq-h" class="section-title">{d.faqTitle}</h2>
+      {d.faq.map((f) => (
+        <details>
+          <summary>{f.q}</summary>
+          <p>{f.a}</p>
+        </details>
+      ))}
+    </section>
+  </div>
+
+  <section class="wrap closing" aria-label={d.cta}>
+    <p class="closing-line">{d.closing}</p>
+    <a class="btn primary lg" href={editor}>{d.cta}</a>
+  </section>
+</Base>

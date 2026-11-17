@@ -3,8 +3,8 @@ import { PDFDocument } from "pdf-lib";
 import { test, expect, img, openEditor, loadBoth, frontInput, backInput, paintedPixels, isRed, isBlue, canvasSize } from "./fixtures";
 import type { Page } from "@playwright/test";
 
-const PNG_BTN = /Muat turun PNG/;
-const PDF_BTN = /Muat turun PDF/;
+const PNG_BTN = /Download PNG/;
+const PDF_BTN = /Download PDF/;
 
 async function save(page: Page, button: RegExp, path: string) {
   const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: button }).click()]);
@@ -20,17 +20,17 @@ test.describe("F01 happy paths", () => {
     await openEditor(page);
     await expect(page.locator("#wm-text")).toBeHidden(); // settings need both sides
     await loadBoth(page);
-    await page.getByLabel("Teks palang").fill("KHAS UNTUK BANK ABC SAHAJA");
+    await page.getByLabel("Watermark text").fill("KHAS UNTUK BANK ABC SAHAJA");
     const { bytes, name } = await save(page, PNG_BTN, out("h1.png"));
     expect(isPng(bytes)).toBe(true);
-    expect(name).toBe("salinan-berpalang.png");
-    await expect(page.getByRole("status")).toContainText("dimuat turun");
+    expect(name).toBe("watermarked-copy.png");
+    await expect(page.getByRole("status")).toContainText("was downloaded");
   });
 
   test("F01-H2 full flow to PDF", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page);
-    await page.getByLabel("Teks palang").fill("KHAS UNTUK SEWA RUMAH");
+    await page.getByLabel("Watermark text").fill("FOR RENTAL USE ONLY");
     const { bytes } = await save(page, PDF_BTN, out("h2.pdf"));
     expect(isPdf(bytes)).toBe(true);
     expect((await PDFDocument.load(bytes)).getPageCount()).toBe(1);
@@ -39,18 +39,18 @@ test.describe("F01 happy paths", () => {
   test("F01-H3 preset fills the text", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page);
-    await page.getByRole("button", { name: "KHAS UNTUK PERMOHONAN KERJA" }).click();
-    await expect(page.getByLabel("Teks palang")).toHaveValue("KHAS UNTUK PERMOHONAN KERJA");
-    await expect(page.getByRole("button", { name: "KHAS UNTUK PERMOHONAN KERJA" })).toHaveAttribute("aria-pressed", "true");
+    await page.getByRole("button", { name: "FOR JOB APPLICATION ONLY" }).click();
+    await expect(page.getByLabel("Watermark text")).toHaveValue("FOR JOB APPLICATION ONLY");
+    await expect(page.getByRole("button", { name: "FOR JOB APPLICATION ONLY" })).toHaveAttribute("aria-pressed", "true");
   });
 
   test("F01-H4 colour choice changes the watermark colour", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page);
-    await page.getByLabel("Teks palang").fill("BANK ABC");
+    await page.getByLabel("Watermark text").fill("BANK ABC");
     await page.waitForTimeout(250);
     expect(await paintedPixels(page, "front", isBlue)).toBeLessThan(50);
-    await page.getByRole("radio", { name: "Biru" }).click();
+    await page.getByRole("radio", { name: "Blue" }).click();
     await page.waitForTimeout(250);
     expect(await paintedPixels(page, "front", isBlue)).toBeGreaterThan(1500);
     expect(await paintedPixels(page, "front", isRed)).toBeLessThan(50);
@@ -59,14 +59,14 @@ test.describe("F01 happy paths", () => {
   test("F01-H5 size and angle sliders update the preview and labels", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page);
-    await page.getByLabel("Teks palang").fill("BANK ABC");
+    await page.getByLabel("Watermark text").fill("BANK ABC");
     await page.waitForTimeout(250);
     const base = await paintedPixels(page, "front", isRed);
     await page.locator("#wm-sz").fill("50");
     await page.locator("#wm-an").fill("-30");
     await page.waitForTimeout(250);
-    await expect(page.getByText("Saiz palang: 50%")).toBeVisible();
-    await expect(page.getByText("Sudut: -30°")).toBeVisible();
+    await expect(page.getByText("Cross size: 50%")).toBeVisible();
+    await expect(page.getByText("Angle: -30°")).toBeVisible();
     expect(await paintedPixels(page, "front", isRed)).toBeLessThan(base);
   });
 });
@@ -76,15 +76,15 @@ test.describe("F01 edge cases", () => {
     await openEditor(page);
     await loadBoth(page);
     const long = "KHAS UNTUK PERMOHONAN PINJAMAN PERUMAHAN BANK ABC CAWANGAN KUALA LUMPUR SAHAJA 10/11/2026 XX".slice(0, 90);
-    await page.getByLabel("Teks palang").fill(long);
-    expect(await page.getByLabel("Teks palang").inputValue()).toHaveLength(90);
+    await page.getByLabel("Watermark text").fill(long);
+    expect(await page.getByLabel("Watermark text").inputValue()).toHaveLength(90);
     expect(isPng((await save(page, PNG_BTN, out("e1.png"))).bytes)).toBe(true);
   });
 
   test("F01-E2 accents and emoji do not break rendering", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page);
-    await page.getByLabel("Teks palang").fill("UNTUK PERMOHONAN ÑÉÜ 🙂 SAHAJA");
+    await page.getByLabel("Watermark text").fill("UNTUK PERMOHONAN ÑÉÜ 🙂 SAHAJA");
     await page.waitForTimeout(250);
     expect(await paintedPixels(page, "front", isRed)).toBeGreaterThan(1000);
     expect(isPdf((await save(page, PDF_BTN, out("e2.pdf"))).bytes)).toBe(true);
@@ -93,7 +93,7 @@ test.describe("F01 edge cases", () => {
   test("F01-E3 tiny image", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page, img(20, 12, "F"), img(20, 12, "B"));
-    await page.getByLabel("Teks palang").fill("BANK ABC");
+    await page.getByLabel("Watermark text").fill("BANK ABC");
     expect(isPng((await save(page, PNG_BTN, out("e3.png"))).bytes)).toBe(true);
   });
 
@@ -102,7 +102,7 @@ test.describe("F01 edge cases", () => {
     await openEditor(page);
     const t0 = Date.now();
     await loadBoth(page, img(6000, 4000, "BIGF"), img(6000, 4000, "BIGB"));
-    await page.getByLabel("Teks palang").fill("BANK ABC");
+    await page.getByLabel("Watermark text").fill("BANK ABC");
     expect(isPng((await save(page, PNG_BTN, out("e4.png"))).bytes)).toBe(true);
     expect(Date.now() - t0).toBeLessThan(40_000);
   });
@@ -110,7 +110,7 @@ test.describe("F01 edge cases", () => {
   test("F01-E5 portrait photo keeps its aspect ratio", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page, img(1000, 2000, "PF"), img(1000, 2000, "PB"));
-    await page.getByLabel("Teks palang").fill("BANK ABC");
+    await page.getByLabel("Watermark text").fill("BANK ABC");
     await page.waitForTimeout(300);
     const { w, h } = await canvasSize(page, "front");
     expect(Math.abs(w / h - 0.5)).toBeLessThan(0.02);
@@ -119,14 +119,14 @@ test.describe("F01 edge cases", () => {
   test("F01-E6 extreme panorama fits and exports", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page, img(4000, 300, "WF"), img(4000, 300, "WB"));
-    await page.getByLabel("Teks palang").fill("BANK ABC");
+    await page.getByLabel("Watermark text").fill("BANK ABC");
     expect(isPng((await save(page, PNG_BTN, out("e6.png"))).bytes)).toBe(true);
   });
 
   test("F01-E7 double click on download gives exactly one file", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page);
-    await page.getByLabel("Teks palang").fill("BANK ABC");
+    await page.getByLabel("Watermark text").fill("BANK ABC");
     let n = 0;
     page.on("download", () => n++);
     await page.getByRole("button", { name: PNG_BTN }).dblclick();
@@ -137,19 +137,19 @@ test.describe("F01 edge cases", () => {
   test("F01-E8 replacing an image keeps the settings", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page);
-    await page.getByLabel("Teks palang").fill("BANK ABC");
+    await page.getByLabel("Watermark text").fill("BANK ABC");
     await frontInput(page).setInputFiles(img(1200, 800, "NEWFRONT"));
     await page.waitForTimeout(300);
-    await expect(page.getByLabel("Teks palang")).toHaveValue("BANK ABC");
+    await expect(page.getByLabel("Watermark text")).toHaveValue("BANK ABC");
     expect(await paintedPixels(page, "front", isRed)).toBeGreaterThan(1000);
   });
 
   test("F01-E9 removing an image closes the settings", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page);
-    await page.getByRole("button", { name: "Buang" }).first().click();
+    await page.getByRole("button", { name: "Remove" }).first().click();
     await expect(page.locator("#wm-text")).toBeHidden();
-    await expect(page.getByText("Tambah kedua-dua depan dan belakang")).toBeVisible();
+    await expect(page.getByText("Add both the front and the back")).toBeVisible();
   });
 
   test("F01-E10 reload clears images but keeps consent", async ({ page }) => {
@@ -165,7 +165,7 @@ test.describe("F01 edge cases", () => {
     await page.waitForLoadState("networkidle"); // the PDF library is preloaded once the editor opens
     await context.setOffline(true);
     await loadBoth(page);
-    await page.getByLabel("Teks palang").fill("BANK ABC");
+    await page.getByLabel("Watermark text").fill("BANK ABC");
     expect(isPdf((await save(page, PDF_BTN, out("e11.pdf"))).bytes)).toBe(true);
   });
 
@@ -180,7 +180,7 @@ test.describe("F01 edge cases", () => {
         await page.keyboard.press("Tab");
         const ok = await page.evaluate((s) => {
           const a = document.activeElement as HTMLInputElement;
-          return a?.type === "file" && a.getAttribute("aria-label") === "Pilih gambar" && !!a.closest(`section[aria-labelledby=${s}-h]`);
+          return a?.type === "file" && a.getAttribute("aria-label") === "Choose image" && !!a.closest(`section[aria-labelledby=${s}-h]`);
         }, side);
         if (ok) return;
       }
@@ -201,18 +201,18 @@ test.describe("F01 edge cases", () => {
     let reached = false;
     for (let i = 0; i < 40 && !reached; i++) {
       await page.keyboard.press("Tab");
-      reached = await page.evaluate(() => (document.activeElement as HTMLElement)?.textContent?.includes("Muat turun PNG") ?? false);
+      reached = await page.evaluate(() => (document.activeElement as HTMLElement)?.textContent?.includes("Download PNG") ?? false);
     }
     expect(reached, "export button reachable by Tab").toBe(true);
     const [dl] = await Promise.all([page.waitForEvent("download"), page.keyboard.press("Enter")]);
-    expect(dl.suggestedFilename()).toBe("salinan-berpalang.png");
+    expect(dl.suggestedFilename()).toBe("watermarked-copy.png");
   });
 
   test("F01-E13 mobile width: no horizontal scroll, touch targets at least 44px", async ({ page }) => {
     await page.setViewportSize({ width: 390, height: 844 });
     await openEditor(page);
     await loadBoth(page);
-    await page.getByLabel("Teks palang").fill("BANK ABC");
+    await page.getByLabel("Watermark text").fill("BANK ABC");
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     const small = await page.evaluate(() => {
       const els = Array.from(document.querySelectorAll<HTMLElement>(".editor .btn, .editor .chip, .editor .swatch, .editor input[type=text], .editor input[type=range], .editor .check"));
@@ -225,7 +225,7 @@ test.describe("F01 edge cases", () => {
   });
 
   test("F01-E14 consent dialog: Escape, focus trap, inert background", async ({ page }) => {
-    await page.goto("/ms/editor/");
+    await page.goto("/editor/");
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
     await expect.poll(() => page.evaluate(() => !!document.activeElement?.closest("[role=dialog]"))).toBe(true); // focus moves in on open
@@ -239,11 +239,11 @@ test.describe("F01 edge cases", () => {
   });
 
   test("F01-E18 consent dialog links to the full privacy page, and Shift+Tab wraps inside", async ({ page }) => {
-    await page.goto("/ms/editor/");
+    await page.goto("/editor/");
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
     await expect.poll(() => page.evaluate(() => !!document.activeElement?.closest("[role=dialog]"))).toBe(true); // focus moves in on open
-    await expect(dialog.getByRole("link", { name: "Baca penjelasan privasi penuh" })).toHaveAttribute("href", "/ms/privasi/");
+    await expect(dialog.getByRole("link", { name: "Read the full privacy explanation" })).toHaveAttribute("href", "/privacy/");
     // the primary button has focus first; Shift+Tab must stay inside the dialog, wrapping to the last control
     await page.keyboard.press("Shift+Tab");
     await page.keyboard.press("Shift+Tab");
@@ -255,7 +255,7 @@ test.describe("F01 edge cases", () => {
   test("F01-E19 portrait photos export on one A4 page", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page, img(1000, 2000, "PF"), img(1000, 2000, "PB"));
-    await page.getByLabel("Teks palang").fill("BANK ABC");
+    await page.getByLabel("Watermark text").fill("BANK ABC");
     const { bytes } = await save(page, PDF_BTN, out("e19.pdf"));
     const doc = await PDFDocument.load(bytes);
     expect(doc.getPageCount()).toBe(1);
@@ -265,16 +265,16 @@ test.describe("F01 edge cases", () => {
     await openEditor(page);
     await loadBoth(page);
     await expect(page.getByRole("button", { name: PNG_BTN })).toBeDisabled();
-    await page.getByLabel("Teks palang").fill("     ");
+    await page.getByLabel("Watermark text").fill("     ");
     await expect(page.getByRole("button", { name: PNG_BTN })).toBeDisabled();
-    await page.getByLabel("Teks palang").fill("X");
+    await page.getByLabel("Watermark text").fill("X");
     await expect(page.getByRole("button", { name: PNG_BTN })).toBeEnabled();
   });
 
   test("F01-E16 angle and size extremes export", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page);
-    await page.getByLabel("Teks palang").fill("KHAS UNTUK BANK ABC SAHAJA");
+    await page.getByLabel("Watermark text").fill("KHAS UNTUK BANK ABC SAHAJA");
     for (const [angle, size] of [["-10", "40"], ["-80", "40"], ["-80", "100"]]) {
       await page.locator("#wm-an").fill(angle);
       await page.locator("#wm-sz").fill(size);
@@ -289,7 +289,7 @@ test.describe("F01 edge cases", () => {
     const f = img(1600, 1010, "SAME");
     await frontInput(page).setInputFiles(f);
     await expect(page.locator("section[aria-labelledby=front-h] canvas")).toBeVisible();
-    await page.getByRole("button", { name: "Buang" }).click();
+    await page.getByRole("button", { name: "Remove" }).click();
     await expect(page.locator("section[aria-labelledby=front-h] canvas")).toHaveCount(0);
     await frontInput(page).setInputFiles(f);
     await expect(page.locator("section[aria-labelledby=front-h] canvas")).toBeVisible();
@@ -300,19 +300,19 @@ test.describe("F01 negative cases", () => {
   test("F01-N1 text file", async ({ page }) => {
     await openEditor(page);
     await frontInput(page).setInputFiles({ name: "a.txt", mimeType: "text/plain", buffer: Buffer.from("hi") });
-    await expect(page.getByRole("alert")).toContainText("bukan gambar");
+    await expect(page.getByRole("alert")).toContainText("is not an image");
   });
 
   test("F01-N2 corrupt image", async ({ page }) => {
     await openEditor(page);
     await frontInput(page).setInputFiles({ name: "a.png", mimeType: "image/png", buffer: Buffer.from("not a png at all") });
-    await expect(page.getByRole("alert")).toContainText("tidak dapat dibaca");
+    await expect(page.getByRole("alert")).toContainText("could not be read");
   });
 
   test("F01-N3 file over 25 MB", async ({ page }) => {
     await openEditor(page);
     await frontInput(page).setInputFiles({ name: "big.png", mimeType: "image/png", buffer: Buffer.alloc(26 * 1024 * 1024, 1) });
-    await expect(page.getByRole("alert")).toContainText("terlalu besar");
+    await expect(page.getByRole("alert")).toContainText("too large");
   });
 
   test("F01-N6 error clears when a good file is chosen", async ({ page }) => {

@@ -388,7 +388,7 @@ export async function exportPdf(front: Surface, back: Surface): Promise<Uint8Arr
     const img = await pdf.embedPng(await encode(c, "png"));
     page.drawImage(img, { x: pt(r.x), y: 841.89 - pt(r.y) - pt(r.h), width: pt(r.w), height: pt(r.h) });
   }
-  pdf.setTitle("Salinan berpalang");
+  pdf.setTitle("Watermarked copy");
   return await pdf.save();
 }
 

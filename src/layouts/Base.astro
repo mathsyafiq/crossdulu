@@ -1,18 +1,20 @@
 ---
+import "@fontsource-variable/newsreader/opsz.css";
 import "../styles/tokens.css";
 import "../styles/global.css";
-import { dict, LANGS, SITE_NAME, path, type Lang, type PageKey } from "../i18n/strings";
+import { dict, SITE_NAME, path, type PageKey } from "../i18n/strings";
 
 interface Props {
-  lang: Lang;
   page: PageKey;
   title: string;
   description: string;
   noindex?: boolean;
+  /** Full-bleed main: the page lays out its own bands and widths (the home page). */
+  bleed?: boolean;
 }
-const { lang, page, title, description, noindex } = Astro.props;
-const d = dict[lang];
-const other: Lang = lang === "ms" ? "en" : "ms";
+const { page, title, description, noindex, bleed } = Astro.props;
+const d = dict;
+const canonical = Astro.site ? new URL(path(page), Astro.site).href : undefined;
 ---
 <!doctype html>
 <html lang={d.htmlLang}>
@@ -23,31 +25,30 @@ const other: Lang = lang === "ms" ? "en" : "ms";
     <title>{title}</title>
     <meta name="description" content={description} />
     {noindex && <meta name="robots" content="noindex" />}
-    {LANGS.map((l) => <link rel="alternate" hreflang={dict[l].htmlLang} href={path(l, page)} />)}
+    {canonical && !noindex && <link rel="canonical" href={canonical} />}
     <link rel="icon" href={`${import.meta.env.BASE_URL.replace(/\/$/, "")}/favicon.svg`} type="image/svg+xml" />
-    <meta name="theme-color" content="#0f766e" />
+    <meta name="theme-color" content="#f6f8f7" />
   </head>
-  <body>
+  <body class={page === "home" ? "is-home" : undefined}>
     <a class="skip" href="#main">{d.nav.skip}</a>
     <header class="site-header">
       <div class="wrap bar">
-        <a class="brand" href={path(lang, "home")}>{SITE_NAME}</a>
+        <a class="brand" href={path("home")}>{SITE_NAME}</a>
         <nav aria-label="Main" class="nav">
-          <a href={path(lang, "editor")} aria-current={page === "editor" ? "page" : undefined}>{d.nav.editor}</a>
-          <a href={path(lang, "privacy")} aria-current={page === "privacy" ? "page" : undefined}>{d.nav.privacy}</a>
-          <a href={path(lang, "terms")} aria-current={page === "terms" ? "page" : undefined}>{d.nav.terms}</a>
-          <span class="langs">
-            <a href={path(lang, page)} lang={lang} aria-current="true">{lang.toUpperCase()}</a>
-            <a href={path(other, page)} lang={other}>{other.toUpperCase()}</a>
-          </span>
+          <a href={path("editor")} aria-current={page === "editor" ? "page" : undefined}>{d.nav.editor}</a>
+          <a href={path("privacy")} aria-current={page === "privacy" ? "page" : undefined}>{d.nav.privacy}</a>
+          <a href={path("terms")} aria-current={page === "terms" ? "page" : undefined}>{d.nav.terms}</a>
         </nav>
       </div>
     </header>
-    <main id="main" class="wrap">
+    <main id="main" class={bleed ? undefined : "wrap"}>
       <slot />
     </main>
     <footer class="site-footer">
-      <div class="wrap">{d.footer}</div>
+      <div class="wrap foot">
+        <span class="brand small-brand">{SITE_NAME}</span>
+        <span>{d.footer}</span>
+      </div>
     </footer>
   </body>
 </html>

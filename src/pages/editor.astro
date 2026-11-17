@@ -1,0 +1,12 @@
+---
+import Base from "../layouts/Base.astro";
+import Editor from "../components/Editor";
+import { dict, path } from "../i18n/strings";
+const d = dict.editor;
+---
+<Base page="editor" title={d.title} description={d.description}>
+  <h1>{d.h1}</h1>
+  <p class="lead">{d.lead}</p>
+  <noscript><p class="notice bad">JavaScript is required: all image work happens in your browser.</p></noscript>
+  <Editor client:only="preact" homeHref={path("home")} privacyHref={path("privacy")} t={d.t} />
+</Base>

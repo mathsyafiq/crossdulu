@@ -1,0 +1,17 @@
+---
+import Base from "../layouts/Base.astro";
+import { dict } from "../i18n/strings";
+const d = dict.terms;
+---
+<Base page="terms" title={d.title} description={d.description}>
+  <article class="prose">
+    <h1>{d.h1}</h1>
+    <p class="muted">{d.updated}</p>
+    {d.sections.map((s) => (
+      <section>
+        <h2>{s.h}</h2>
+        {s.p.map((p) => <p>{p}</p>)}
+      </section>
+    ))}
+  </article>
+</Base>

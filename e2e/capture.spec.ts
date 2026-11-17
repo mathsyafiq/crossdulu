@@ -3,7 +3,7 @@ import AxeBuilder from "@axe-core/playwright";
 import { test, expect, img, openEditor, canvasSize, frontInput } from "./fixtures";
 
 const cameraBtn = (page: import("@playwright/test").Page, side: "front" | "back") =>
-  page.locator(`section[aria-labelledby=${side}-h]`).getByRole("button", { name: "Guna kamera" });
+  page.locator(`section[aria-labelledby=${side}-h]`).getByRole("button", { name: "Use camera" });
 
 /** A scanned-copy lookalike: front on top and back below on one A4 page (sample images, not real IDs). */
 async function icCopyPdf(opts: { pages?: "one" | "two" | "single"; cardLabel?: string } = {}) {
@@ -44,14 +44,14 @@ test.describe("F06 camera with a guide box", () => {
   test("F06-H1 the camera shows a card-shaped guide, and Take picture fills the slot with just the boxed area", async ({ page }) => {
     await openEditor(page);
     await cameraBtn(page, "front").click();
-    const dialog = page.getByRole("dialog", { name: "Ambil gambar kad" });
+    const dialog = page.getByRole("dialog", { name: "Take a picture of the card" });
     await expect(dialog).toBeVisible();
     const guide = page.getByTestId("camera-guide");
     await expect(guide).toBeVisible();
     const box = (await guide.boundingBox())!;
     expect(Math.abs(box.width / box.height - 85.6 / 53.98)).toBeLessThan(0.05);
-    await expect(dialog.getByRole("button", { name: "Ambil gambar" })).toBeEnabled();
-    await dialog.getByRole("button", { name: "Ambil gambar" }).click();
+    await expect(dialog.getByRole("button", { name: "Take picture" })).toBeEnabled();
+    await dialog.getByRole("button", { name: "Take picture" }).click();
     await expect(dialog).toBeHidden();
     await expect(page.locator("section[aria-labelledby=front-h] canvas")).toBeVisible();
     const s = await canvasSize(page, "front");
@@ -62,14 +62,14 @@ test.describe("F06 camera with a guide box", () => {
   test("F06-E1 Escape and Cancel close the camera and switch it off", async ({ page }) => {
     await openEditor(page);
     await cameraBtn(page, "front").click();
-    const dialog = page.getByRole("dialog", { name: "Ambil gambar kad" });
+    const dialog = page.getByRole("dialog", { name: "Take a picture of the card" });
     await expect(page.getByTestId("camera-guide")).toBeVisible();
     await page.keyboard.press("Escape");
     await expect(dialog).toBeHidden();
     expect(await live(page)).toBe(false);
     await cameraBtn(page, "back").click();
     await expect(page.getByTestId("camera-guide")).toBeVisible();
-    await dialog.getByRole("button", { name: "Batal" }).click();
+    await dialog.getByRole("button", { name: "Cancel" }).click();
     await expect(dialog).toBeHidden();
     expect(await live(page)).toBe(false);
     await expect(page.locator("section[aria-labelledby=back-h] canvas")).toHaveCount(0);
@@ -78,8 +78,8 @@ test.describe("F06 camera with a guide box", () => {
   test("F06-E2 keyboard only: focus lands on Take picture and Tab stays inside the dialog", async ({ page }) => {
     await openEditor(page);
     await cameraBtn(page, "front").click();
-    const dialog = page.getByRole("dialog", { name: "Ambil gambar kad" });
-    await expect(dialog.getByRole("button", { name: "Ambil gambar" })).toBeFocused();
+    const dialog = page.getByRole("dialog", { name: "Take a picture of the card" });
+    await expect(dialog.getByRole("button", { name: "Take picture" })).toBeFocused();
     for (let i = 0; i < 4; i++) {
       await page.keyboard.press("Tab");
       expect(await page.evaluate(() => !!document.activeElement?.closest("[role=dialog]"))).toBe(true);
@@ -96,10 +96,10 @@ test.describe("F06 camera with a guide box", () => {
     page.on("filechooser", (c) => choosers.push(c));
     await openEditor(page);
     await cameraBtn(page, "front").click();
-    const dialog = page.getByRole("dialog", { name: "Ambil gambar kad" });
-    await expect(dialog.getByRole("alert")).toContainText("Kamera tidak dapat dibuka");
-    await expect(dialog.getByRole("alert")).toContainText("Akses kamera disekat");
-    await dialog.getByLabel("Pilih gambar sahaja", { exact: true }).click();
+    const dialog = page.getByRole("dialog", { name: "Take a picture of the card" });
+    await expect(dialog.getByRole("alert")).toContainText("The camera could not be opened");
+    await expect(dialog.getByRole("alert")).toContainText("Camera access is blocked");
+    await dialog.getByLabel("Choose a picture instead", { exact: true }).click();
     await expect.poll(() => choosers.length).toBe(1);
     await (choosers[0] as import("@playwright/test").FileChooser).setFiles(img(1600, 1010, "PHONE"));
     await expect(dialog).toBeHidden();
@@ -107,7 +107,7 @@ test.describe("F06 camera with a guide box", () => {
   });
 
   test("F06-A1 the camera dialog has no accessibility violations (English too)", async ({ page }) => {
-    await openEditor(page, "en");
+    await openEditor(page);
     await page.locator("section[aria-labelledby=front-h]").getByRole("button", { name: "Use camera" }).click();
     await expect(page.getByRole("dialog", { name: "Take a picture of the card" })).toBeVisible();
     await expect(page.getByTestId("camera-guide")).toBeVisible();
@@ -122,13 +122,13 @@ test.describe("F07 upload a PDF of an ID copy", () => {
     await pdfInput(page).setInputFiles(await icCopyPdf());
     await expect(page.locator("section[aria-labelledby=front-h] canvas")).toBeVisible({ timeout: 30_000 });
     await expect(page.locator("section[aria-labelledby=back-h] canvas")).toBeVisible();
-    await expect(page.getByRole("status").filter({ hasText: "diasingkan" })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "separated them" })).toBeVisible();
     for (const side of ["front", "back"] as const) {
       const s = await canvasSize(page, side);
       expect(Math.abs(s.w / s.h - 85.6 / 53.98), `${side} is card shaped, not a whole page`).toBeLessThan(0.12);
       expect(s.w).toBeGreaterThan(700);
     }
-    await expect(page.getByRole("button", { name: "Tukar depan dan belakang" })).toBeVisible();
+    await expect(page.getByRole("button", { name: "Swap front and back" })).toBeVisible();
   });
 
   test("F07-H2 two pages (front, then back) fill both slots", async ({ page }) => {
@@ -142,9 +142,9 @@ test.describe("F07 upload a PDF of an ID copy", () => {
     await openEditor(page);
     await pdfInput(page).setInputFiles(await icCopyPdf());
     await expect(page.locator("section[aria-labelledby=back-h] canvas")).toBeVisible({ timeout: 30_000 });
-    await page.getByLabel("Teks palang").fill("BANK ABC");
-    const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Muat turun PNG" }).click()]);
-    expect(dl.suggestedFilename()).toBe("salinan-berpalang.png");
+    await page.getByLabel("Watermark text").fill("BANK ABC");
+    const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download PNG" }).click()]);
+    expect(dl.suggestedFilename()).toBe("watermarked-copy.png");
   });
 
   test("F07-E1 a PDF with one card goes into the slot you chose and asks for the other side", async ({ page }) => {
@@ -152,7 +152,7 @@ test.describe("F07 upload a PDF of an ID copy", () => {
     await page.locator("section[aria-labelledby=back-h] input[type=file]").first().setInputFiles(await icCopyPdf({ pages: "single" }));
     await expect(page.locator("section[aria-labelledby=back-h] canvas")).toBeVisible({ timeout: 30_000 });
     await expect(page.locator("section[aria-labelledby=front-h] canvas")).toHaveCount(0);
-    await expect(page.getByRole("status").filter({ hasText: "Satu kad" })).toBeVisible();
+    await expect(page.getByRole("status").filter({ hasText: "Found one card" })).toBeVisible();
   });
 
   test("F07-E2 swap front and back", async ({ page }) => {
@@ -168,21 +168,21 @@ test.describe("F07 upload a PDF of an ID copy", () => {
     }));
     let before: string[] = [];
     await expect.poll(async () => { const a = await prints(); await page.waitForTimeout(300); const b = await prints(); before = b; return a.join() === b.join() && b.length === 2 && b[0] !== b[1]; }).toBe(true);
-    await page.getByRole("button", { name: "Tukar depan dan belakang" }).click();
+    await page.getByRole("button", { name: "Swap front and back" }).click();
     await expect.poll(prints).toEqual([before[1], before[0]]);
   });
 
   test("F07-N1 a broken file named .pdf gives a clear error and leaves the slots empty", async ({ page }) => {
     await openEditor(page);
     await pdfInput(page).setInputFiles({ name: "rosak.pdf", mimeType: "application/pdf", buffer: Buffer.from("this is not a pdf") });
-    await expect(page.getByRole("alert")).toContainText("PDF tidak dapat dibaca", { timeout: 30_000 });
+    await expect(page.getByRole("alert")).toContainText("The PDF could not be read", { timeout: 30_000 });
     await expect(page.locator("canvas")).toHaveCount(0);
   });
 
   test("F07-N2 a PDF over 25 MB is refused", async ({ page }) => {
     await openEditor(page);
     await pdfInput(page).setInputFiles({ name: "besar.pdf", mimeType: "application/pdf", buffer: Buffer.alloc(26 * 1024 * 1024, 1) });
-    await expect(page.getByRole("alert")).toContainText("terlalu besar");
+    await expect(page.getByRole("alert")).toContainText("too large");
   });
 
   test("F07-E3 still works with the connection dropped after the page has loaded (nothing is fetched later)", async ({ page, context }) => {

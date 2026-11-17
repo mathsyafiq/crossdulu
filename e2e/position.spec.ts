@@ -25,13 +25,13 @@ test.describe("F08 band position", () => {
   test("F08-H1 by default the band is only in the top-left corner and leaves the middle of the card clear", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page);
-    await page.getByLabel("Teks palang").fill("KHAS UNTUK BANK ABC");
-    await expect(page.getByRole("radio", { name: "Sudut kiri atas" })).toHaveAttribute("aria-checked", "true");
+    await page.getByLabel("Watermark text").fill("KHAS UNTUK BANK ABC");
+    await expect(page.getByRole("radio", { name: "Top-left corner" })).toHaveAttribute("aria-checked", "true");
     await expect.poll(() => redIn(page, "front", CORNER)).toBeGreaterThan(500);
     expect(await redIn(page, "front", MIDDLE), "front middle").toBe(0);
     expect(await redIn(page, "front", [0.5, 0, 1, 1]), "front right half").toBe(0);
     expect(await redIn(page, "back", MIDDLE), "back middle").toBe(0);
-    await expect(page.getByText("dalam satu baris")).toBeVisible();
+    await expect(page.getByText("on one line")).toBeVisible();
     // the band runs out past the card: the preview has room around the card
     const pad = await page.locator("section[aria-labelledby=front-h] canvas").getAttribute("data-pad");
     expect(pad!.split(",").map(Number).slice(0, 2).every((n) => n > 0), `room around the card: ${pad}`).toBe(true);
@@ -40,27 +40,27 @@ test.describe("F08 band position", () => {
   test("F08-H2 choosing the middle puts the band across the card, and back to the corner clears it again", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page);
-    await page.getByLabel("Teks palang").fill("KHAS UNTUK BANK ABC");
-    await page.getByRole("radio", { name: "Tengah kad" }).click();
+    await page.getByLabel("Watermark text").fill("KHAS UNTUK BANK ABC");
+    await page.getByRole("radio", { name: "Across the middle" }).click();
     await expect.poll(() => redIn(page, "front", MIDDLE)).toBeGreaterThan(500);
-    await expect(page.getByLabel(/Saiz palang/)).toHaveValue("100");
-    await page.getByRole("radio", { name: "Sudut kiri atas" }).click();
+    await expect(page.getByLabel(/Cross size/)).toHaveValue("100");
+    await page.getByRole("radio", { name: "Top-left corner" }).click();
     await expect.poll(() => redIn(page, "front", MIDDLE)).toBe(0);
-    await expect(page.getByLabel(/Saiz palang/)).toHaveValue("75");
+    await expect(page.getByLabel(/Cross size/)).toHaveValue("75");
   });
 
   test("F08-E1 the size slider changes the band size; every angle keeps the lower right of the card clear", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page);
-    await page.getByLabel("Teks palang").fill("KHAS UNTUK BANK ABC");
-    const sz = page.getByLabel(/Saiz palang/);
+    await page.getByLabel("Watermark text").fill("KHAS UNTUK BANK ABC");
+    const sz = page.getByLabel(/Cross size/);
     await sz.fill("40");
     await expect.poll(() => redIn(page, "front", [0.3, 0, 1, 1])).toBe(0);
     const small = await redIn(page, "front", CORNER);
     await sz.fill("100");
     await expect.poll(() => redIn(page, "front", [0, 0, 0.6, 0.8])).toBeGreaterThan(small);
     for (const a of ["-10", "-45", "-80"]) {
-      await page.getByLabel(/Sudut/).fill(a);
+      await page.getByLabel(/^Angle/).fill(a);
       await expect.poll(() => redIn(page, "front", [0.62, 0.62, 1, 1]), `angle ${a}`).toBe(0);
     }
   });
@@ -68,13 +68,13 @@ test.describe("F08 band position", () => {
   test("F08-E2 a PNG can be exported with the corner band", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page);
-    await page.getByLabel("Teks palang").fill("BANK ABC");
-    const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Muat turun PNG" }).click()]);
-    expect(dl.suggestedFilename()).toBe("salinan-berpalang.png");
+    await page.getByLabel("Watermark text").fill("BANK ABC");
+    const [dl] = await Promise.all([page.waitForEvent("download"), page.getByRole("button", { name: "Download PNG" }).click()]);
+    expect(dl.suggestedFilename()).toBe("watermarked-copy.png");
   });
 
   test("F08-E3 English labels and the position choice work by keyboard", async ({ page }) => {
-    await openEditor(page, "en");
+    await openEditor(page);
     await loadBoth(page, img(1600, 1010, "F"), img(1600, 1010, "B"));
     await page.getByLabel("Watermark text").fill("FOR BANK ABC ONLY");
     const mid = page.getByRole("radio", { name: "Across the middle" });
@@ -86,8 +86,8 @@ test.describe("F08 band position", () => {
   test("F08-E4 the horizontal and vertical sliders move the band where the user wants it", async ({ page }) => {
     await openEditor(page);
     await loadBoth(page);
-    await page.getByLabel("Teks palang").fill("BANK ABC");
-    const hx = page.getByLabel(/Kedudukan mendatar/), vy = page.getByLabel(/Kedudukan menegak/);
+    await page.getByLabel("Watermark text").fill("BANK ABC");
+    const hx = page.getByLabel(/Horizontal position/), vy = page.getByLabel(/Vertical position/);
     await expect.poll(() => redIn(page, "front", [0, 0, 0.3, 0.45])).toBeGreaterThan(300); // starts in the corner
     await hx.fill("100");
     await expect.poll(() => redIn(page, "front", [0, 0, 0.5, 1])).toBe(0);
@@ -98,12 +98,12 @@ test.describe("F08 band position", () => {
     await expect.poll(() => redIn(page, "front", [0, 0.5, 0.3, 1])).toBeGreaterThan(300);
     // the same position is used for the back card, and for the middle option the sliders are not shown
     await expect.poll(() => redIn(page, "back", [0, 0.5, 0.3, 1])).toBeGreaterThan(300);
-    await page.getByRole("radio", { name: "Tengah kad" }).click();
+    await page.getByRole("radio", { name: "Across the middle" }).click();
     await expect(hx).toBeHidden();
   });
 
   test("F08-E5 the position sliders can be used by keyboard and have labels in English", async ({ page }) => {
-    await openEditor(page, "en");
+    await openEditor(page);
     await loadBoth(page);
     await page.getByLabel("Watermark text").fill("BANK ABC");
     const hx = page.getByLabel(/Horizontal position/);
